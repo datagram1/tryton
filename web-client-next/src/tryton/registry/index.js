@@ -14,6 +14,9 @@ import DateWidget from './widgets/DateWidget';
 import DateTimeWidget from './widgets/DateTimeWidget';
 import SelectionWidget from './widgets/SelectionWidget';
 import LabelWidget from './widgets/LabelWidget';
+import Many2OneWidget from './widgets/Many2OneWidget';
+import One2ManyWidget from './widgets/One2ManyWidget';
+import Many2ManyWidget from './widgets/Many2ManyWidget';
 
 // Widget registry mapping Tryton types to React components
 const widgetRegistry = {
@@ -36,6 +39,11 @@ const widgetRegistry = {
 
   // Selection (dropdown)
   selection: SelectionWidget,
+
+  // Relational fields
+  many2one: Many2OneWidget,
+  one2many: One2ManyWidget,
+  many2many: Many2ManyWidget,
 
   // Layout widgets
   label: LabelWidget,

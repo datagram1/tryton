@@ -135,14 +135,42 @@ Stack: React, Vite, React-Bootstrap (Bootstrap 5), Zustand (State), fast-xml-par
 
 *These are the hardest parts and should be tackled after the basics work.*
 
-* \[ \] **Many2One Widget (The Lookup)**  
-  * Needs an Autocomplete/Combobox.  
-  * On type: RPC model.\[TargetModel\].search.  
-  * On select: Store the ID.  
-* \[ \] **One2Many / Many2Many Widget (The Grid)**  
-  * Requires a Data Grid component (recommend @tanstack/react-table or a simple Bootstrap Table to start).  
-  * Needs to fetch the list of related IDs.  
-  * Needs to render a nested TreeView (List view) inside the Form.  
-* \[ \] **Action Handling**  
-  * Handle \<button name="action\_..." /\>.  
+* \[x\] **Many2One Widget (The Lookup)**
+  * Needs an Autocomplete/Combobox.
+  * On type: RPC model.\[TargetModel\].search.
+  * On select: Store the ID.
+* \[x\] **One2Many / Many2Many Widget (The Grid)**
+  * Requires a Data Grid component (recommend @tanstack/react-table or a simple Bootstrap Table to start).
+  * Needs to fetch the list of related IDs.
+  * Needs to render a nested TreeView (List view) inside the Form.
+* \[x\] **Action Handling**
+  * Handle \<button name="action\_..." /\>.
   * Logic to trigger Server Actions, Reports, or Wizards (Popups).
+
+## **Phase 8: Integration & Polish (COMPLETED)**
+
+*Goal: Connect all components, eliminate placeholders, and add theme support.*
+
+* \[x\] **Action Execution System**
+  * Created `actionExecutor.js` to parse and execute Tryton actions
+  * Implemented `executeActWindowAction()` for window actions
+  * Support for multiple action types (act\_window, report, wizard, url)
+* \[x\] **ListView Component**
+  * Created full-featured ListView component with @tanstack/react-table
+  * Dynamic column generation from tree view XML
+  * Pagination, sorting, and record count
+  * Click-to-open form view functionality
+* \[x\] **Dynamic Tab System**
+  * Updated TabManager to render actual views instead of placeholders
+  * Support for form, list/tree, and action tab types
+  * Proper view routing based on tab type
+* \[x\] **Menu Integration**
+  * Updated MainLayout to execute actions when menu items clicked
+  * Dynamic view loading based on action configuration
+  * Support for act\_window actions with proper view type detection
+* \[x\] **Theme System**
+  * Created comprehensive SCSS theme with Bootstrap 5 variables
+  * Customizable color palette for all components
+  * Sidebar, navbar, form, and table theming
+  * Created THEME\_CUSTOMIZATION.md documentation
+  * Responsive design with mobile support

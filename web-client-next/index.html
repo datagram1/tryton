@@ -9,5 +9,14 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <!-- React DevTools - connects to standalone app on localhost:8097 -->
+    <script>
+      // Only load in development mode (Vite injects import.meta.env)
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        const script = document.createElement('script');
+        script.src = 'http://localhost:8097';
+        document.head.appendChild(script);
+      }
+    </script>
   </body>
 </html>

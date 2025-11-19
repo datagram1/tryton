@@ -1,6 +1,66 @@
 import { Nav, Tab, Button } from 'react-bootstrap';
 import { FiX } from 'react-icons/fi';
 import useTabsStore from '../store/tabs';
+import FormView from './FormView';
+import ListView from './ListView';
+
+/**
+ * Render tab content based on type
+ */
+function renderTabContent(tab) {
+  switch (tab.type) {
+    case 'form':
+      return (
+        <FormView
+          modelName={tab.props?.modelName}
+          recordId={tab.props?.recordId}
+          viewId={tab.props?.viewId}
+        />
+      );
+
+    case 'list':
+    case 'tree':
+      return (
+        <ListView
+          modelName={tab.props?.modelName}
+          viewId={tab.props?.viewId}
+          domain={tab.props?.domain || []}
+          limit={tab.props?.limit || 80}
+        />
+      );
+
+    case 'action':
+      // Action tabs need to be resolved - show placeholder for now
+      return (
+        <div className="p-4">
+          <h4>{tab.title}</h4>
+          <p className="text-muted">
+            Loading action...
+          </p>
+          {tab.props && (
+            <pre className="bg-light p-3 rounded">
+              {JSON.stringify(tab.props, null, 2)}
+            </pre>
+          )}
+        </div>
+      );
+
+    default:
+      return (
+        <div className="p-4">
+          <h4>{tab.title}</h4>
+          <p className="text-muted">
+            Unknown tab type: {tab.type || 'none'}
+          </p>
+          {tab.props && (
+            <pre className="bg-light p-3 rounded">
+              {JSON.stringify(tab.props, null, 2)}
+            </pre>
+          )}
+        </div>
+      );
+  }
+}
 
 /**
  * TabManager Component
@@ -71,23 +131,7 @@ function TabManager({ children }) {
       <Tab.Content className="h-100 overflow-auto">
         {tabs.map((tab) => (
           <Tab.Pane key={tab.id} eventKey={tab.id} className="h-100">
-            {children ? children(tab) : (
-              <div className="p-4">
-                <h4>{tab.title}</h4>
-                <p className="text-muted">
-                  Tab Type: {tab.type || 'unknown'}
-                </p>
-                <p className="text-muted">
-                  This is a placeholder. The actual content will be rendered
-                  based on the tab type (form, list, graph, etc.)
-                </p>
-                {tab.props && (
-                  <pre className="bg-light p-3 rounded">
-                    {JSON.stringify(tab.props, null, 2)}
-                  </pre>
-                )}
-              </div>
-            )}
+            {children ? children(tab) : renderTabContent(tab)}
           </Tab.Pane>
         ))}
       </Tab.Content>
