@@ -179,7 +179,11 @@ export async function executeAction(actionId, sessionId, database) {
       return {
         type: 'wizard',
         action,
-        message: 'Wizard actions not yet implemented',
+        config: {
+          wizardAction: action.wiz_name || action.model, // Wizard action name
+          name: action.name,
+          window: action.window || false, // Open in tab vs modal
+        },
       };
 
     case 'ir.action.url':

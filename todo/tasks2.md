@@ -484,9 +484,9 @@ Currently implemented: None
 
 ### Priority: HIGH
 
-Currently implemented: None (placeholder message only)
+Currently implemented: Full wizard system ✅
 
-- [ ] **6.1 Wizard Framework**
+- [x] **6.1 Wizard Framework** ✅ COMPLETED
   - File: `src/tryton/wizard/WizardManager.js`
   - Multi-state workflow support
   - State transitions (next, previous, finish, cancel)
@@ -495,21 +495,22 @@ Currently implemented: None (placeholder message only)
   - Progress indicator
   - Reference: `/home/user/tryton/sao/src/wizard.js`
 
-- [ ] **6.2 Wizard Window Component**
+- [x] **6.2 Wizard Window Component** ✅ COMPLETED
   - File: `src/windows/WizardWindow.jsx`
   - Modal dialog for wizards
   - State navigation buttons
   - Form view per wizard state
   - Execute server-side wizard actions
-  - RPC: `wizard` method
+  - RPC: `wizard.{action}.create/execute/delete` methods
   - Reference: `/home/user/tryton/sao/src/wizard.js`
 
-- [ ] **6.3 Wizard Action Executor**
+- [x] **6.3 Wizard Action Executor** ✅ COMPLETED
   - Location: `src/tryton/actions/actionExecutor.js`
   - Handle `ir.action.wizard` type
   - Launch wizard windows
   - Pass context to wizard
   - Handle wizard results
+  - Integrated into MainLayout.jsx
 
 ---
 

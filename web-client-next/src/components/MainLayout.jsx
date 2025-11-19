@@ -3,6 +3,7 @@ import { Navbar, Container, Dropdown, Spinner, Alert } from 'react-bootstrap';
 import { FiMenu, FiUser, FiLogOut } from 'react-icons/fi';
 import Sidebar from './Sidebar';
 import TabManager from './TabManager';
+import WizardWindow from '../windows/WizardWindow';
 import useSessionStore from '../store/session';
 import useMenuStore from '../store/menu';
 import useTabsStore from '../store/tabs';
@@ -14,6 +15,8 @@ import { executeAction } from '../tryton/actions/actionExecutor';
  */
 function MainLayout() {
   const [sidebarVisible, setSidebarVisible] = useState(true);
+  const [wizardConfig, setWizardConfig] = useState(null);
+  const [showWizard, setShowWizard] = useState(false);
   const { username, logout, sessionId, database } = useSessionStore();
   const { menuTree, isLoading, loadMenu, error } = useMenuStore();
   const { openTab } = useTabsStore();
@@ -64,6 +67,24 @@ function MainLayout() {
       } else if (result.type === 'url') {
         // Open URL in new window
         window.open(result.url, '_blank');
+      } else if (result.type === 'wizard') {
+        // Open wizard modal
+        console.log('[MainLayout] Opening wizard:', result.config);
+        setWizardConfig({
+          action: result.config.wizardAction,
+          name: result.config.name,
+          data: {
+            action_id: menuItem.actionId,
+            id: null,
+            ids: [],
+            model: null
+          },
+          context: {}
+        });
+        setShowWizard(true);
+      } else if (result.type === 'report') {
+        // Show message for report actions
+        alert('Report generation not yet implemented');
       } else {
         // Show message for unsupported action types
         alert(result.message || `Action type '${result.type}' not yet supported`);
@@ -76,6 +97,25 @@ function MainLayout() {
 
   const handleLogout = async () => {
     await logout();
+  };
+
+  const handleWizardClose = () => {
+    setShowWizard(false);
+    setWizardConfig(null);
+  };
+
+  const handleWizardComplete = (serverAction) => {
+    console.log('[MainLayout] Wizard completed with action:', serverAction);
+    setShowWizard(false);
+    setWizardConfig(null);
+
+    // Handle server actions
+    if (serverAction === 'reload menu') {
+      loadMenu();
+    } else if (serverAction === 'reload context') {
+      // TODO: Reload session context
+      console.log('[MainLayout] TODO: Reload context');
+    }
   };
 
   return (
@@ -147,6 +187,18 @@ function MainLayout() {
           )}
         </div>
       </div>
+
+      {/* Wizard Modal */}
+      {wizardConfig && (
+        <WizardWindow
+          show={showWizard}
+          action={wizardConfig.action}
+          data={wizardConfig.data}
+          context={wizardConfig.context}
+          onClose={handleWizardClose}
+          onComplete={handleWizardComplete}
+        />
+      )}
     </div>
   );
 }
