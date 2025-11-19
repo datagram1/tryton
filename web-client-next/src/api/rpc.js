@@ -85,8 +85,12 @@ export async function call(method, params = [], sessionId = null, database = '')
     id: requestId,
   };
 
-  // Construct URL: /{database}/ for database-specific methods, / for common methods
-  const url = database ? `/${database}/` : '/';
+  // Construct URL: Use /tryton prefix for Vite proxy, then database path
+  // Proxy will rewrite /tryton/* to backend
+  // Backend expects: /{database}/ or /
+  const url = database ? `/tryton/${database}/` : '/tryton/';
+
+  console.log('[rpc] Calling:', { method, url, params: paramsWithContext, requestId });
 
   try {
     const response = await axios.post(url, payload, {
@@ -95,6 +99,8 @@ export async function call(method, params = [], sessionId = null, database = '')
         ...(authorizationHeader && { 'Authorization': `Session ${authorizationHeader}` }),
       },
     });
+
+    console.log('[rpc] Response:', { method, requestId, status: response.status, data: response.data });
 
     if (response.data.error) {
       const error = response.data.error;

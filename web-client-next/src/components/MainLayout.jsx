@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Navbar, Container, Dropdown, Spinner } from 'react-bootstrap';
+import { Navbar, Container, Dropdown, Spinner, Alert } from 'react-bootstrap';
 import { FiMenu, FiUser, FiLogOut } from 'react-icons/fi';
 import Sidebar from './Sidebar';
 import TabManager from './TabManager';
 import useSessionStore from '../store/session';
 import useMenuStore from '../store/menu';
 import useTabsStore from '../store/tabs';
+import { executeAction } from '../tryton/actions/actionExecutor';
 
 /**
  * MainLayout Component
@@ -24,19 +25,52 @@ function MainLayout() {
     }
   }, [sessionId, database, loadMenu, menuTree.length]);
 
-  const handleMenuClick = (menuItem) => {
-    // When a menu item is clicked, open a new tab
-    if (menuItem.actionId) {
-      openTab({
-        id: `menu-${menuItem.id}`,
-        title: menuItem.name,
-        type: 'action',
-        props: {
-          actionId: menuItem.actionId,
-          actionType: menuItem.actionType,
-          menuId: menuItem.id,
-        },
-      });
+  const handleMenuClick = async (menuItem) => {
+    // When a menu item is clicked, execute the action and open appropriate view
+    if (!menuItem.actionId) {
+      return;
+    }
+
+    try {
+      // Execute the action to get configuration
+      console.log('[MainLayout] Executing action:', menuItem.actionId);
+      const result = await executeAction(menuItem.actionId, sessionId, database);
+      console.log('[MainLayout] Action result:', result);
+
+      if (result.type === 'act_window') {
+        const config = result.config;
+        console.log('[MainLayout] Act window config:', config);
+
+        // Determine which view to open (tree or form)
+        const viewType = config.initialViewType;
+        const tabType = viewType === 'form' ? 'form' : 'list';
+
+        const tabProps = {
+          modelName: config.resModel,
+          viewId: config.viewIds[viewType] || null,
+          domain: config.domain,
+          limit: config.limit,
+        };
+
+        console.log('[MainLayout] Opening tab with props:', tabProps);
+
+        // Create appropriate tab
+        openTab({
+          id: `menu-${menuItem.id}-${Date.now()}`,
+          title: config.name || menuItem.name,
+          type: tabType,
+          props: tabProps,
+        });
+      } else if (result.type === 'url') {
+        // Open URL in new window
+        window.open(result.url, '_blank');
+      } else {
+        // Show message for unsupported action types
+        alert(result.message || `Action type '${result.type}' not yet supported`);
+      }
+    } catch (error) {
+      console.error('Error executing action:', error);
+      alert(`Failed to execute action: ${error.message}`);
     }
   };
 

@@ -8,9 +8,7 @@ import useSessionStore from '../store/session';
  */
 function Login({ onLoginSuccess }) {
   const [database, setDatabase] = useState('tryton');
-  const [username, setUsername] = useState(
-    import.meta.env.VITE_DEV_DEFAULT_LOGIN || ''
-  );
+  const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('');
 
   const { login, isLoading, error, clearError } = useSessionStore();
