@@ -119,11 +119,13 @@ Currently implemented: char, integer, float, boolean, date, datetime, selection,
   - Image size limits and validation
   - Reference: `/home/user/tryton/sao/src/view/form.js` (image field)
 
-- [ ] **1.13 Document Widget**
+- [x] **1.13 Document Widget** ✅ COMPLETED
   - File: `src/tryton/registry/widgets/DocumentWidget.jsx`
   - Document display/upload
-  - PDF preview
-  - Document type icons
+  - PDF preview (iframe-based for PDFs)
+  - Document type icons (PDF, Word, Excel, PowerPoint, images, archives, etc.)
+  - Drag & drop support
+  - File size display
   - Reference: `/home/user/tryton/sao/src/view/form.js` (document field)
 
 ### Missing Link Widgets

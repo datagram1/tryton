@@ -31,6 +31,7 @@ import HTMLWidget from './widgets/HTMLWidget';
 import ProgressBarWidget from './widgets/ProgressBarWidget';
 import TimeDeltaWidget from './widgets/TimeDeltaWidget';
 import ReferenceWidget from './widgets/ReferenceWidget';
+import DocumentWidget from './widgets/DocumentWidget';
 
 // Widget registry mapping Tryton types to React components
 const widgetRegistry = {
@@ -74,6 +75,7 @@ const widgetRegistry = {
   // Binary/Media widgets
   binary: BinaryWidget, // File upload/download
   image: ImageWidget, // Image upload with preview
+  document: DocumentWidget, // Document upload with PDF preview
 
   // Special/Display widgets
   html: HTMLWidget, // HTML content display (read-only)
