@@ -1,5 +1,6 @@
 import { Row, Col, Nav, Tab } from 'react-bootstrap';
 import { getNodeAttr } from '../parsers/xml';
+import { getWidget } from '../registry';
 
 /**
  * Tryton View Renderer
@@ -9,7 +10,7 @@ import { getNodeAttr } from '../parsers/xml';
 /**
  * Render a group node (layout container)
  */
-function renderGroup(node, fields, record, depth = 0) {
+function renderGroup(node, fields, record, onFieldChange, readonly, depth = 0) {
   const col = getNodeAttr(node, 'col', 4);
   const colspan = getNodeAttr(node, 'colspan', 1);
   const string = getNodeAttr(node, 'string', '');
@@ -28,6 +29,8 @@ function renderGroup(node, fields, record, depth = 0) {
                 node={child}
                 fields={fields}
                 record={record}
+                onFieldChange={onFieldChange}
+                readonly={readonly}
                 depth={depth + 1}
               />
             </Col>
@@ -41,7 +44,7 @@ function renderGroup(node, fields, record, depth = 0) {
 /**
  * Render a notebook node (tabs container)
  */
-function renderNotebook(node, fields, record, depth = 0) {
+function renderNotebook(node, fields, record, onFieldChange, readonly, depth = 0) {
   const pages = node.children.filter((child) => child.tag === 'page');
 
   if (pages.length === 0) {
@@ -67,6 +70,8 @@ function renderNotebook(node, fields, record, depth = 0) {
               node={page}
               fields={fields}
               record={record}
+              onFieldChange={onFieldChange}
+              readonly={readonly}
               depth={depth + 1}
             />
           </Tab.Pane>
@@ -79,7 +84,7 @@ function renderNotebook(node, fields, record, depth = 0) {
 /**
  * Render a page node (tab page content)
  */
-function renderPage(node, fields, record, depth = 0) {
+function renderPage(node, fields, record, onFieldChange, readonly, depth = 0) {
   return (
     <div key={`page-${depth}`}>
       {node.children && node.children.map((child, idx) => (
@@ -88,6 +93,8 @@ function renderPage(node, fields, record, depth = 0) {
           node={child}
           fields={fields}
           record={record}
+          onFieldChange={onFieldChange}
+          readonly={readonly}
           depth={depth + 1}
         />
       ))}
@@ -135,12 +142,14 @@ function renderLabel(node, fields, depth = 0) {
 }
 
 /**
- * Render a field node (placeholder - will be enhanced in Phase 5)
+ * Render a field node using the widget registry
  */
-function renderField(node, fields, record, depth = 0) {
+function renderField(node, fields, record, onFieldChange, readonly = false, depth = 0) {
   const name = getNodeAttr(node, 'name', '');
-  const readonly = getNodeAttr(node, 'readonly', false);
+  const widgetOverride = getNodeAttr(node, 'widget', null);
+  const fieldReadonly = readonly || getNodeAttr(node, 'readonly', false);
   const required = getNodeAttr(node, 'required', false);
+  const string = getNodeAttr(node, 'string', null);
 
   if (!name || !fields[name]) {
     return (
@@ -153,17 +162,36 @@ function renderField(node, fields, record, depth = 0) {
   const field = fields[name];
   const value = record ? record[name] : null;
 
+  // Get the appropriate widget for this field type
+  const widgetType = widgetOverride || field.type;
+  const WidgetComponent = getWidget(widgetType);
+
+  // Merge field metadata with any overrides from the node
+  const fieldWithOverrides = {
+    ...field,
+    required: required || field.required,
+    string: string || field.string || name,
+  };
+
+  const isRequired = fieldWithOverrides.required;
+  const labelText = fieldWithOverrides.string;
+
   return (
-    <div key={`field-${depth}-${name}`} className="mb-2">
-      <label className="form-label">
-        {field.string || name}
-        {required && <span className="text-danger ms-1">*</span>}
-      </label>
-      <div className="border rounded p-2 bg-light">
-        <small className="text-muted">
-          Type: {field.type} | Value: {JSON.stringify(value) || '(empty)'}
-        </small>
-      </div>
+    <div key={`field-${depth}-${name}`} className="mb-3">
+      {labelText && (
+        <label className="form-label fw-semibold">
+          {labelText}
+          {isRequired && <span className="text-danger ms-1">*</span>}
+        </label>
+      )}
+      <WidgetComponent
+        name={name}
+        value={value}
+        onChange={onFieldChange}
+        readonly={fieldReadonly}
+        field={fieldWithOverrides}
+        attributes={node.attributes || {}}
+      />
     </div>
   );
 }
@@ -190,7 +218,7 @@ function renderButton(node, depth = 0) {
 /**
  * Main Recursive Renderer Component
  */
-function TrytonViewRenderer({ node, fields = {}, record = null, depth = 0 }) {
+function TrytonViewRenderer({ node, fields = {}, record = null, onFieldChange = null, readonly = false, depth = 0 }) {
   if (!node) {
     return null;
   }
@@ -208,6 +236,8 @@ function TrytonViewRenderer({ node, fields = {}, record = null, depth = 0 }) {
               node={child}
               fields={fields}
               record={record}
+              onFieldChange={onFieldChange}
+              readonly={readonly}
               depth={depth + 1}
             />
           ))}
@@ -215,13 +245,13 @@ function TrytonViewRenderer({ node, fields = {}, record = null, depth = 0 }) {
       );
 
     case 'group':
-      return renderGroup(node, fields, record, depth);
+      return renderGroup(node, fields, record, onFieldChange, readonly, depth);
 
     case 'notebook':
-      return renderNotebook(node, fields, record, depth);
+      return renderNotebook(node, fields, record, onFieldChange, readonly, depth);
 
     case 'page':
-      return renderPage(node, fields, record, depth);
+      return renderPage(node, fields, record, onFieldChange, readonly, depth);
 
     case 'separator':
       return renderSeparator(node, depth);
@@ -230,7 +260,7 @@ function TrytonViewRenderer({ node, fields = {}, record = null, depth = 0 }) {
       return renderLabel(node, fields, depth);
 
     case 'field':
-      return renderField(node, fields, record, depth);
+      return renderField(node, fields, record, onFieldChange, readonly, depth);
 
     case 'button':
       return renderButton(node, depth);

@@ -118,17 +118,17 @@ Stack: React, Vite, React-Bootstrap (Bootstrap 5), Zustand (State), fast-xml-par
 
 *Goal: Load real data into the forms and handle user input.*
 
-* \[ \] **Form View Container**  
-  * Create a wrapper component FormView that manages the state of a single record.  
-  * RPC Call: model.\[ModelName\].read to get data for a specific ID.  
-  * State: recordData (object).  
-* \[ \] **Handling onChange**  
-  * Implement the "On Change" handler.  
-  * *Note:* In Tryton, changing a field often triggers a server call (on\_change\_\[field\]) to update other fields.  
-  * Create logic: When generic input changes \-\> update local state \-\> debounce \-\> call server on\_change \-\> update local state with result.  
-* \[ \] **Save / Write**  
-  * Implement "Save" button in the toolbar.  
-  * If ID exists: RPC model.write.  
+* \[x\] **Form View Container**
+  * Create a wrapper component FormView that manages the state of a single record.
+  * RPC Call: model.\[ModelName\].read to get data for a specific ID.
+  * State: recordData (object).
+* \[x\] **Handling onChange**
+  * Implement the "On Change" handler.
+  * *Note:* In Tryton, changing a field often triggers a server call (on\_change\_\[field\]) to update other fields.
+  * Create logic: When generic input changes \-\> update local state \-\> debounce \-\> call server on\_change \-\> update local state with result.
+* \[x\] **Save / Write**
+  * Implement "Save" button in the toolbar.
+  * If ID exists: RPC model.write.
   * If ID is new: RPC model.create.
 
 ## **Phase 7: Complex Widgets (Advanced)**
