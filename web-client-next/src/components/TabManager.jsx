@@ -3,6 +3,7 @@ import { FiX } from 'react-icons/fi';
 import useTabsStore from '../store/tabs';
 import FormView from './FormView';
 import ListView from './ListView';
+import CalendarView from './CalendarView';
 
 /**
  * Render tab content based on type
@@ -26,6 +27,16 @@ function renderTabContent(tab) {
           viewId={tab.props?.viewId}
           domain={tab.props?.domain || []}
           limit={tab.props?.limit || 80}
+        />
+      );
+
+    case 'calendar':
+      return (
+        <CalendarView
+          modelName={tab.props?.modelName}
+          viewId={tab.props?.viewId}
+          domain={tab.props?.domain || []}
+          limit={tab.props?.limit || 1000}
         />
       );
 

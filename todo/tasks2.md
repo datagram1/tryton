@@ -194,15 +194,16 @@ Currently implemented: Form, List (Tree)
 
 ### Missing Views
 
-- [ ] **2.1 Calendar View**
+- [x] **2.1 Calendar View** ✅ COMPLETED
   - File: `src/components/CalendarView.jsx`
-  - Month/Week/Day view switching
-  - Event rendering from records
-  - Drag & drop events to reschedule
-  - Event resize to change duration
-  - Click to create events
-  - Color coding by field
-  - Integration: FullCalendar or react-big-calendar
+  - Month/Week/Day/Agenda view switching ✅
+  - Event rendering from records ✅
+  - Drag & drop events to reschedule ✅
+  - Event resize to change duration ✅
+  - Click to create events ✅
+  - Color coding by field (background_color and color attributes) ✅
+  - Integration: react-big-calendar ✅
+  - Registered in TabManager and MainLayout ✅
   - Reference: `/home/user/tryton/sao/src/view/calendar.js`
 
 - [ ] **2.2 Graph/Chart View**
