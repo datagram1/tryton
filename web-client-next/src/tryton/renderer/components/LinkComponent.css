@@ -1,0 +1,21 @@
+.link-component {
+  padding: 0.25rem 0.5rem;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.link-component:hover {
+  text-decoration: underline;
+}
+
+.link-icon {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.link-label {
+  display: inline-block;
+  vertical-align: middle;
+}
