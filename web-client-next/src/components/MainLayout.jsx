@@ -41,19 +41,22 @@ function MainLayout() {
         const config = result.config;
         console.log('[MainLayout] Act window config:', config);
 
-        // Determine which view to open (tree, form, calendar, etc.)
+        // Determine which view to open (tree, form, calendar, graph, board, list-form, gantt)
         const viewType = config.initialViewType;
         let tabType = 'list'; // default
-        if (viewType === 'form') {
-          tabType = 'form';
-        } else if (viewType === 'calendar') {
-          tabType = 'calendar';
-        } else if (viewType === 'tree') {
-          tabType = 'list';
-        } else {
-          // For other view types (graph, etc.), default to list for now
-          tabType = 'list';
-        }
+
+        // Map view types to tab types
+        const viewTypeMap = {
+          'form': 'form',
+          'tree': 'list',
+          'calendar': 'calendar',
+          'graph': 'graph',
+          'board': 'board',
+          'list-form': 'list-form',
+          'gantt': 'gantt',
+        };
+
+        tabType = viewTypeMap[viewType] || 'list';
 
         const tabProps = {
           modelName: config.resModel,
