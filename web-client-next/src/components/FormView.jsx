@@ -8,6 +8,7 @@ import useSessionStore from '../store/session';
 import useTabsStore from '../store/tabs';
 import { createButtonHandler } from '../tryton/actions/buttonHandler';
 import { useFormValidation } from '../hooks/useFormValidation';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 
 /**
  * FormView Component
@@ -487,6 +488,64 @@ function FormView({ modelName, recordId, viewId = null, listContext = null }) {
       setError(err.message || 'Button action failed');
     }
   }, [modelName, recordId, sessionId, database]);
+
+  // Register keyboard shortcuts for form actions
+  useKeyboardShortcuts({
+    'Ctrl+S': () => {
+      if (!isSaving && !hasErrors && isDirty) {
+        handleSave();
+      }
+    },
+    'Ctrl+N': () => {
+      if (!isSaving) {
+        handleNew();
+      }
+    },
+    'Ctrl+D': () => {
+      if (!isSaving && recordId) {
+        handleDelete();
+      }
+    },
+    'Ctrl+Shift+D': () => {
+      if (!isSaving && recordId) {
+        handleDuplicate();
+      }
+    },
+    'Ctrl+R': () => {
+      if (!isSaving) {
+        handleReload();
+      }
+    },
+    'Ctrl+L': () => {
+      if (!isSaving) {
+        handleSwitchView();
+      }
+    },
+    'Ctrl+ArrowUp': () => {
+      if (!isSaving && listContext) {
+        handlePrevious();
+      }
+    },
+    'Ctrl+ArrowDown': () => {
+      if (!isSaving && listContext) {
+        handleNext();
+      }
+    },
+  }, [
+    isDirty,
+    isSaving,
+    hasErrors,
+    recordId,
+    listContext,
+    handleSave,
+    handleNew,
+    handleDelete,
+    handleDuplicate,
+    handleReload,
+    handleSwitchView,
+    handlePrevious,
+    handleNext,
+  ]);
 
   // Loading state
   if (isLoading) {

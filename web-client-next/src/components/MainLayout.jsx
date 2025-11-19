@@ -3,10 +3,12 @@ import { Navbar, Container, Dropdown, Spinner, Alert } from 'react-bootstrap';
 import { FiMenu, FiUser, FiLogOut } from 'react-icons/fi';
 import Sidebar from './Sidebar';
 import TabManager from './TabManager';
+import KeyboardShortcutHelp from './KeyboardShortcutHelp';
 import useSessionStore from '../store/session';
 import useMenuStore from '../store/menu';
 import useTabsStore from '../store/tabs';
 import { executeAction } from '../tryton/actions/actionExecutor';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 
 /**
  * MainLayout Component
@@ -14,9 +16,10 @@ import { executeAction } from '../tryton/actions/actionExecutor';
  */
 function MainLayout() {
   const [sidebarVisible, setSidebarVisible] = useState(true);
+  const [showShortcutHelp, setShowShortcutHelp] = useState(false);
   const { username, logout, sessionId, database } = useSessionStore();
   const { menuTree, isLoading, loadMenu, error } = useMenuStore();
-  const { openTab } = useTabsStore();
+  const { openTab, closeTab, tabs, activeTabId, setActiveTab } = useTabsStore();
 
   // Load menu on mount
   useEffect(() => {
@@ -77,6 +80,40 @@ function MainLayout() {
   const handleLogout = async () => {
     await logout();
   };
+
+  // Register global keyboard shortcuts
+  useKeyboardShortcuts({
+    'F1': () => setShowShortcutHelp(true),
+    'Alt+W': () => {
+      if (activeTabId) {
+        closeTab(activeTabId);
+      }
+    },
+    'Ctrl+Tab': () => {
+      // Cycle to next tab
+      const currentIndex = tabs.findIndex(tab => tab.id === activeTabId);
+      if (currentIndex >= 0 && tabs.length > 1) {
+        const nextIndex = (currentIndex + 1) % tabs.length;
+        setActiveTab(tabs[nextIndex].id);
+      }
+    },
+    'Alt+Tab': () => {
+      // Next tab
+      const currentIndex = tabs.findIndex(tab => tab.id === activeTabId);
+      if (currentIndex >= 0 && tabs.length > 1) {
+        const nextIndex = (currentIndex + 1) % tabs.length;
+        setActiveTab(tabs[nextIndex].id);
+      }
+    },
+    'Alt+Shift+Tab': () => {
+      // Previous tab
+      const currentIndex = tabs.findIndex(tab => tab.id === activeTabId);
+      if (currentIndex >= 0 && tabs.length > 1) {
+        const prevIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+        setActiveTab(tabs[prevIndex].id);
+      }
+    },
+  }, [tabs, activeTabId, closeTab, setActiveTab]);
 
   return (
     <div className="d-flex flex-column vh-100">
@@ -147,6 +184,12 @@ function MainLayout() {
           )}
         </div>
       </div>
+
+      {/* Keyboard Shortcut Help Dialog */}
+      <KeyboardShortcutHelp
+        show={showShortcutHelp}
+        onHide={() => setShowShortcutHelp(false)}
+      />
     </div>
   );
 }

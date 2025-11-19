@@ -11,6 +11,7 @@ import { parseAndNormalizeView } from '../tryton/parsers/xml';
 import rpc from '../api/rpc';
 import useSessionStore from '../store/session';
 import useTabsStore from '../store/tabs';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 
 /**
  * ListView Component
@@ -33,6 +34,7 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const searchDebounceTimer = useRef(null);
+  const searchInputRef = useRef(null);
   const [selectedRows, setSelectedRows] = useState(new Set());
   const [rowSelection, setRowSelection] = useState({});
 
@@ -373,6 +375,22 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
   }, [selectedRows, modelName, sessionId, database]);
 
   /**
+   * Register keyboard shortcuts for list view actions
+   */
+  useKeyboardShortcuts({
+    'Ctrl+F': () => {
+      // Focus the search input
+      if (searchInputRef.current) {
+        searchInputRef.current.focus();
+        searchInputRef.current.select();
+      }
+    },
+    'Ctrl+N': () => {
+      handleNew();
+    },
+  }, [handleNew]);
+
+  /**
    * Initialize table
    */
   const table = useReactTable({
@@ -458,6 +476,7 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
                 <FaSearch />
               </InputGroup.Text>
               <Form.Control
+                ref={searchInputRef}
                 type="text"
                 placeholder="Search records... (Ctrl+F)"
                 value={searchQuery}
