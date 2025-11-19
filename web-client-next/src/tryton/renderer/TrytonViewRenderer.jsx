@@ -1,6 +1,10 @@
 import { Row, Col, Nav, Tab } from 'react-bootstrap';
 import { getNodeAttr } from '../parsers/xml';
 import { getWidget } from '../registry';
+import PanedComponent from './components/PanedComponent';
+import ExpanderComponent from './components/ExpanderComponent';
+import LinkComponent from './components/LinkComponent';
+import ImageComponent from './components/ImageComponent';
 
 /**
  * Tryton View Renderer
@@ -9,11 +13,14 @@ import { getWidget } from '../registry';
 
 /**
  * Render a group node (layout container)
+ * Enhanced with better colspan, yexpand, yfill support
  */
 function renderGroup(node, fields, record, onFieldChange, onButtonClick, readonly, validationProps, depth = 0) {
   const col = getNodeAttr(node, 'col', 4);
   const colspan = getNodeAttr(node, 'colspan', 1);
   const string = getNodeAttr(node, 'string', '');
+  const yexpand = getNodeAttr(node, 'yexpand', false);
+  const yfill = getNodeAttr(node, 'yfill', false);
 
   return (
     <div key={`group-${depth}`} className="mb-3">
@@ -22,9 +29,21 @@ function renderGroup(node, fields, record, onFieldChange, onButtonClick, readonl
         {node.children && node.children.map((child, idx) => {
           const childColspan = getNodeAttr(child, 'colspan', 1);
           const colWidth = Math.floor((childColspan / col) * 12);
+          const childYExpand = getNodeAttr(child, 'yexpand', yexpand);
+          const childYFill = getNodeAttr(child, 'yfill', yfill);
+
+          // Apply CSS classes based on yexpand and yfill
+          const additionalClasses = [];
+          if (childYExpand) additionalClasses.push('flex-grow-1');
+          if (childYFill) additionalClasses.push('h-100');
 
           return (
-            <Col key={idx} xs={12} md={colWidth || 6} className="mb-2">
+            <Col
+              key={idx}
+              xs={12}
+              md={colWidth || 6}
+              className={`mb-2 ${additionalClasses.join(' ')}`}
+            >
               <TrytonViewRenderer
                 node={child}
                 fields={fields}
@@ -277,6 +296,120 @@ function renderButton(node, onButtonClick = null, depth = 0) {
 }
 
 /**
+ * Render a paned node (horizontal or vertical split panes)
+ */
+function renderPaned(node, fields, record, onFieldChange, onButtonClick, readonly, validationProps, orientation = 'horizontal', depth = 0) {
+  const position = getNodeAttr(node, 'position', 50);
+
+  const children = node.children && node.children.map((child, idx) => (
+    <TrytonViewRenderer
+      key={idx}
+      node={child}
+      fields={fields}
+      record={record}
+      onFieldChange={onFieldChange}
+      onButtonClick={onButtonClick}
+      readonly={readonly}
+      validationErrors={validationProps?.validationErrors}
+      validationWarnings={validationProps?.validationWarnings}
+      fieldStates={validationProps?.fieldStates}
+      getFieldValidationProps={validationProps?.getFieldValidationProps}
+      depth={depth + 1}
+    />
+  ));
+
+  return (
+    <PanedComponent
+      key={`paned-${depth}`}
+      orientation={orientation}
+      defaultPosition={position}
+    >
+      {children}
+    </PanedComponent>
+  );
+}
+
+/**
+ * Render an expander node (collapsible section)
+ */
+function renderExpander(node, fields, record, onFieldChange, onButtonClick, readonly, validationProps, depth = 0) {
+  const string = getNodeAttr(node, 'string', '');
+  const expandable = getNodeAttr(node, 'expandable', '0');
+  const defaultExpanded = expandable === '1';
+
+  return (
+    <ExpanderComponent
+      key={`expander-${depth}`}
+      title={string}
+      defaultExpanded={defaultExpanded}
+    >
+      {node.children && node.children.map((child, idx) => (
+        <TrytonViewRenderer
+          key={idx}
+          node={child}
+          fields={fields}
+          record={record}
+          onFieldChange={onFieldChange}
+          onButtonClick={onButtonClick}
+          readonly={readonly}
+          validationErrors={validationProps?.validationErrors}
+          validationWarnings={validationProps?.validationWarnings}
+          fieldStates={validationProps?.fieldStates}
+          getFieldValidationProps={validationProps?.getFieldValidationProps}
+          depth={depth + 1}
+        />
+      ))}
+    </ExpanderComponent>
+  );
+}
+
+/**
+ * Render a link node (clickable link button)
+ */
+function renderLink(node, record, onButtonClick = null, depth = 0) {
+  const name = getNodeAttr(node, 'name', '');
+  const string = getNodeAttr(node, 'string', '');
+  const icon = getNodeAttr(node, 'icon', null);
+  const id = getNodeAttr(node, 'id', null);
+
+  return (
+    <LinkComponent
+      key={`link-${depth}`}
+      name={name}
+      label={string}
+      icon={icon}
+      record={record}
+      onClick={onButtonClick}
+      attributes={{ id }}
+    />
+  );
+}
+
+/**
+ * Render an image node (static image display)
+ */
+function renderImage(node, fields, record, depth = 0) {
+  const name = getNodeAttr(node, 'name', '');
+  const size = getNodeAttr(node, 'size', 48);
+  const border = getNodeAttr(node, 'border', null);
+  const type = getNodeAttr(node, 'type', 'url');
+  const urlSize = getNodeAttr(node, 'url_size', null);
+
+  return (
+    <ImageComponent
+      key={`image-${depth}`}
+      name={name}
+      size={size}
+      border={border}
+      type={type}
+      urlSizeParam={urlSize}
+      record={record}
+      fields={fields}
+    />
+  );
+}
+
+/**
  * Main Recursive Renderer Component
  */
 function TrytonViewRenderer({
@@ -350,6 +483,21 @@ function TrytonViewRenderer({
 
     case 'button':
       return renderButton(node, onButtonClick, depth);
+
+    case 'hpaned':
+      return renderPaned(node, fields, record, onFieldChange, onButtonClick, readonly, validationProps, 'horizontal', depth);
+
+    case 'vpaned':
+      return renderPaned(node, fields, record, onFieldChange, onButtonClick, readonly, validationProps, 'vertical', depth);
+
+    case 'expander':
+      return renderExpander(node, fields, record, onFieldChange, onButtonClick, readonly, validationProps, depth);
+
+    case 'link':
+      return renderLink(node, record, onButtonClick, depth);
+
+    case 'image':
+      return renderImage(node, fields, record, depth);
 
     default:
       // Unknown node type

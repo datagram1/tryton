@@ -484,9 +484,9 @@ Currently implemented: None
 
 ### Priority: HIGH
 
-Currently implemented: None (placeholder message only)
+Currently implemented: Full wizard system ✅
 
-- [ ] **6.1 Wizard Framework**
+- [x] **6.1 Wizard Framework** ✅ COMPLETED
   - File: `src/tryton/wizard/WizardManager.js`
   - Multi-state workflow support
   - State transitions (next, previous, finish, cancel)
@@ -495,21 +495,22 @@ Currently implemented: None (placeholder message only)
   - Progress indicator
   - Reference: `/home/user/tryton/sao/src/wizard.js`
 
-- [ ] **6.2 Wizard Window Component**
+- [x] **6.2 Wizard Window Component** ✅ COMPLETED
   - File: `src/windows/WizardWindow.jsx`
   - Modal dialog for wizards
   - State navigation buttons
   - Form view per wizard state
   - Execute server-side wizard actions
-  - RPC: `wizard` method
+  - RPC: `wizard.{action}.create/execute/delete` methods
   - Reference: `/home/user/tryton/sao/src/wizard.js`
 
-- [ ] **6.3 Wizard Action Executor**
+- [x] **6.3 Wizard Action Executor** ✅ COMPLETED
   - Location: `src/tryton/actions/actionExecutor.js`
   - Handle `ir.action.wizard` type
   - Launch wizard windows
   - Pass context to wizard
   - Handle wizard results
+  - Integrated into MainLayout.jsx
 
 ---
 
@@ -521,38 +522,43 @@ Currently implemented: form, group, notebook, page, separator, label, field, but
 
 ### Missing Layout Components
 
-- [ ] **7.1 Paned Component (Horizontal/Vertical)**
+- [x] **7.1 Paned Component (Horizontal/Vertical)** ✅ COMPLETED
   - File: `src/tryton/renderer/components/PanedComponent.jsx`
   - Splittable panes with draggable divider
   - Horizontal and vertical orientation
-  - Resizable panels
+  - Resizable panels with mouse drag
   - Reference: `/home/user/tryton/sao/src/view/form.js`
 
-- [ ] **7.2 Expander Component**
+- [x] **7.2 Expander Component** ✅ COMPLETED
   - File: `src/tryton/renderer/components/ExpanderComponent.jsx`
   - Collapsible section with expand/collapse
   - Header with arrow indicator
-  - Expand state persistence
+  - Bootstrap Collapse integration
+  - Keyboard accessible (Enter/Space to toggle)
   - Reference: `/home/user/tryton/sao/src/view/form.js`
 
-- [ ] **7.3 Container Component Enhancements**
+- [x] **7.3 Container Component Enhancements** ✅ COMPLETED
   - Location: `src/tryton/renderer/TrytonViewRenderer.jsx`
   - Better grid layout support
   - Column spanning (colspan attribute)
   - Row positioning (yexpand, yfill attributes)
   - Reference: `/home/user/tryton/sao/src/view/form.js` (Container class)
 
-- [ ] **7.4 Link Component**
+- [x] **7.4 Link Component** ✅ COMPLETED
   - File: `src/tryton/renderer/components/LinkComponent.jsx`
   - Clickable hyperlinks in forms
-  - External URL support
+  - External URL support (opens in new tab)
   - Icon support
+  - Action execution support
   - Reference: `/home/user/tryton/sao/src/view/form.js`
 
-- [ ] **7.5 Image Component**
+- [x] **7.5 Image Component** ✅ COMPLETED
   - File: `src/tryton/renderer/components/ImageComponent.jsx`
   - Static image display in forms
   - Image sizing attributes
+  - Border styles (rounded, circle)
+  - Support for URL, color, and icon types
+  - URL size parameter support
   - Reference: `/home/user/tryton/sao/src/view/form.js`
 
 ---
@@ -673,18 +679,25 @@ Currently implemented: Full CRUD operations in both widgets ✅
   - Add to relationship
   - Reference: `/home/user/tryton/sao/src/view/form.js` (Many2Many class)
 
-- [ ] **9.4 Inline Tree Editing**
+- [x] **9.4 Inline Tree Editing** ✅ COMPLETED
   - Location: Both O2M and M2M widgets
-  - Editable cells in grid
-  - Tab navigation between cells
-  - Auto-save or save button
+  - Editable cells in grid (click to edit)
+  - Tab navigation between cells (Tab/Shift+Tab)
+  - Auto-save on blur or Enter key
+  - Escape key to cancel editing
+  - Visual highlight for editing cell (yellow background)
+  - Supports text, number, and boolean field types
+  - Error handling with value reversion on failure
   - Reference: `/home/user/tryton/sao/src/view/tree.js`
 
-- [ ] **9.5 Tree View Configuration**
+- [x] **9.5 Tree View Configuration** ✅ COMPLETED
   - Location: Both O2M and M2M widgets
-  - Parse tree view definition from relation
-  - Dynamic column generation (already done, but ensure complete)
-  - Support for editable attribute
+  - Parse tree view definition from relation (fieldsViewGet)
+  - Extract field order from view XML structure
+  - Dynamic column generation from tree view children
+  - Support for editable attribute (`editable="1"` in tree XML)
+  - Column metadata includes readonly, type from field definitions
+  - Fallback to all fields if tree structure not found
   - Reference: `/home/user/tryton/sao/src/view/form.js`
 
 ---

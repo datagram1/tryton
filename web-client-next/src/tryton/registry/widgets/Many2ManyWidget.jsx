@@ -32,10 +32,14 @@ const Many2ManyWidget = ({ name, value, onChange, readonly, field, record }) => 
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [showSearchDialog, setShowSearchDialog] = useState(false);
   const [showFormDialog, setShowFormDialog] = useState(false);
+  const [editingCell, setEditingCell] = useState(null); // {recordId, fieldName}
+  const [cellValues, setCellValues] = useState({}); // Temporary cell values during edit
+  const [viewDefinition, setViewDefinition] = useState(null);
   const searchInputRef = useRef(null);
   const autocompleteTimeoutRef = useRef(null);
 
   const targetModel = field?.relation;
+  const isEditable = viewDefinition?.arch?.attributes?.editable === '1';
 
   /**
    * Load related records
@@ -59,8 +63,22 @@ const Many2ManyWidget = ({ name, value, onChange, readonly, field, record }) => 
           database
         );
 
-        // Extract visible fields from tree view or use all fields
-        const fieldNames = Object.keys(viewDef.fields).slice(0, 5); // Limit to first 5 fields
+        setViewDefinition(viewDef);
+
+        // Extract visible fields from tree view definition
+        // Parse the tree XML to get field order from the actual view
+        let fieldNames = [];
+        if (viewDef.arch && viewDef.arch.children) {
+          // Get fields from tree children in order
+          fieldNames = viewDef.arch.children
+            .filter(child => child.tag === 'field')
+            .map(child => child.attributes.name);
+        }
+
+        // Fallback to all fields if no tree structure found
+        if (fieldNames.length === 0) {
+          fieldNames = Object.keys(viewDef.fields).slice(0, 5);
+        }
 
         // Read the records
         const recordData = await rpc.read(
@@ -78,6 +96,8 @@ const Many2ManyWidget = ({ name, value, onChange, readonly, field, record }) => 
           id: fieldName,
           accessorKey: fieldName,
           header: viewDef.fields[fieldName]?.string || fieldName,
+          readonly: viewDef.fields[fieldName]?.readonly || false,
+          type: viewDef.fields[fieldName]?.type || 'char',
           cell: (info) => {
             const cellValue = info.getValue();
             // Format Many2One fields
@@ -210,6 +230,164 @@ const Many2ManyWidget = ({ name, value, onChange, readonly, field, record }) => 
     // Add the new record to the relationship
     const newValue = value && Array.isArray(value) ? [...value, recordId] : [recordId];
     onChange(name, newValue);
+  };
+
+  /**
+   * Handle cell click for inline editing
+   */
+  const handleCellClick = (recordId, fieldName, column) => {
+    if (!isEditable || readonly || column.readonly) return;
+
+    const record = records.find(r => r.id === recordId);
+    if (!record) return;
+
+    setEditingCell({ recordId, fieldName });
+    setCellValues(prev => ({
+      ...prev,
+      [`${recordId}-${fieldName}`]: record[fieldName]
+    }));
+  };
+
+  /**
+   * Handle cell value change
+   */
+  const handleCellChange = (recordId, fieldName, newValue) => {
+    setCellValues(prev => ({
+      ...prev,
+      [`${recordId}-${fieldName}`]: newValue
+    }));
+  };
+
+  /**
+   * Handle cell blur - save the value
+   */
+  const handleCellBlur = async (recordId, fieldName) => {
+    if (!editingCell || editingCell.recordId !== recordId || editingCell.fieldName !== fieldName) {
+      return;
+    }
+
+    const cellKey = `${recordId}-${fieldName}`;
+    const newValue = cellValues[cellKey];
+    const record = records.find(r => r.id === recordId);
+
+    if (!record || record[fieldName] === newValue) {
+      setEditingCell(null);
+      return;
+    }
+
+    try {
+      // Update the record on the server
+      await rpc.write(
+        targetModel,
+        [recordId],
+        { [fieldName]: newValue },
+        sessionId,
+        database
+      );
+
+      // Update local state
+      setRecords(prev => prev.map(r =>
+        r.id === recordId ? { ...r, [fieldName]: newValue } : r
+      ));
+    } catch (error) {
+      console.error('Error updating cell:', error);
+      // Revert to original value on error
+      const originalValue = record[fieldName];
+      setCellValues(prev => ({
+        ...prev,
+        [cellKey]: originalValue
+      }));
+    } finally {
+      setEditingCell(null);
+    }
+  };
+
+  /**
+   * Handle keyboard navigation in editable cells
+   */
+  const handleCellKeyDown = (e, recordId, fieldName, rowIndex, colIndex) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleCellBlur(recordId, fieldName);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setEditingCell(null);
+      // Revert value
+      const record = records.find(r => r.id === recordId);
+      if (record) {
+        setCellValues(prev => ({
+          ...prev,
+          [`${recordId}-${fieldName}`]: record[fieldName]
+        }));
+      }
+    } else if (e.key === 'Tab') {
+      e.preventDefault();
+      handleCellBlur(recordId, fieldName);
+      // Move to next editable cell
+      const nextColIndex = e.shiftKey ? colIndex - 1 : colIndex + 1;
+      if (nextColIndex >= 0 && nextColIndex < columns.length) {
+        const nextColumn = columns[nextColIndex];
+        if (!nextColumn.readonly) {
+          setTimeout(() => handleCellClick(recordId, nextColumn.accessorKey, nextColumn), 0);
+        }
+      }
+    }
+  };
+
+  /**
+   * Render cell content (either editable or read-only)
+   */
+  const renderCellContent = (cell, column, recordId) => {
+    const fieldName = column.accessorKey;
+    const isEditingThis = editingCell?.recordId === recordId && editingCell?.fieldName === fieldName;
+    const cellKey = `${recordId}-${fieldName}`;
+    const cellValue = isEditingThis ? cellValues[cellKey] : cell.getValue();
+
+    if (isEditable && !readonly && !column.readonly && isEditingThis) {
+      // Render editable input
+      if (column.type === 'boolean') {
+        return (
+          <Form.Check
+            type="checkbox"
+            checked={!!cellValue}
+            onChange={(e) => handleCellChange(recordId, fieldName, e.target.checked)}
+            onBlur={() => handleCellBlur(recordId, fieldName)}
+            onKeyDown={(e) => handleCellKeyDown(e, recordId, fieldName, cell.row.index, cell.column.index)}
+            autoFocus
+          />
+        );
+      } else if (column.type === 'selection') {
+        // For selection fields, would need to get selection options
+        // For now, treat as text
+        return (
+          <Form.Control
+            size="sm"
+            type="text"
+            value={cellValue || ''}
+            onChange={(e) => handleCellChange(recordId, fieldName, e.target.value)}
+            onBlur={() => handleCellBlur(recordId, fieldName)}
+            onKeyDown={(e) => handleCellKeyDown(e, recordId, fieldName, cell.row.index, cell.column.index)}
+            autoFocus
+          />
+        );
+      } else {
+        // Default text input
+        return (
+          <Form.Control
+            size="sm"
+            type={column.type === 'integer' || column.type === 'float' ? 'number' : 'text'}
+            value={cellValue || ''}
+            onChange={(e) => handleCellChange(recordId, fieldName, e.target.value)}
+            onBlur={() => handleCellBlur(recordId, fieldName)}
+            onKeyDown={(e) => handleCellKeyDown(e, recordId, fieldName, cell.row.index, cell.column.index)}
+            autoFocus
+          />
+        );
+      }
+    }
+
+    // Render read-only content
+    return flexRender(cell.column.columnDef.cell, cell.getContext());
   };
 
   /**
@@ -432,12 +610,24 @@ const Many2ManyWidget = ({ name, value, onChange, readonly, field, record }) => 
           </thead>
           <tbody>
             {table.getRowModel().rows.map((row) => (
-              <tr key={row.id} style={{ cursor: 'pointer' }} onClick={() => handleRowClick(row.original.id)}>
-                {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </td>
-                ))}
+              <tr key={row.id}>
+                {row.getVisibleCells().map((cell) => {
+                  const column = columns[cell.column.index];
+                  const isEditingThis = editingCell?.recordId === row.original.id &&
+                                       editingCell?.fieldName === column.accessorKey;
+                  return (
+                    <td
+                      key={cell.id}
+                      onClick={() => handleCellClick(row.original.id, column.accessorKey, column)}
+                      style={{
+                        cursor: isEditable && !readonly && !column.readonly ? 'pointer' : 'default',
+                        backgroundColor: isEditingThis ? '#fff3cd' : 'transparent'
+                      }}
+                    >
+                      {renderCellContent(cell, column, row.original.id)}
+                    </td>
+                  );
+                })}
                 {!readonly && (
                   <td onClick={(e) => e.stopPropagation()}>
                     <Button
