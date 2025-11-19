@@ -66,7 +66,7 @@ Currently implemented: char, integer, float, boolean, date, datetime, selection,
   - Time format validation
   - Reference: `/home/user/tryton/sao/src/view/form.js` (time field)
 
-- [ ] **1.6 TimeDelta Widget**
+- [x] **1.6 TimeDelta Widget** ✅ COMPLETED
   - File: `src/tryton/registry/widgets/TimeDeltaWidget.jsx`
   - Duration/time difference input
   - Format: days, hours, minutes, seconds
@@ -88,10 +88,10 @@ Currently implemented: char, integer, float, boolean, date, datetime, selection,
 
 ### Missing Relational Widgets
 
-- [ ] **1.9 Reference Widget**
+- [x] **1.9 Reference Widget** ✅ COMPLETED
   - File: `src/tryton/registry/widgets/ReferenceWidget.jsx`
   - Dynamic model reference field
-  - Model selector dropdown + Many2One combo
+  - Model selector dropdown + Many2One autocomplete combo
   - Format: "model.name,123"
   - Reference: `/home/user/tryton/sao/src/view/form.js` (reference field)
 
@@ -648,28 +648,28 @@ Currently implemented: Basic sortable list with pagination
 
 ### Priority: HIGH
 
-Currently implemented: Read-only grids with delete/remove
+Currently implemented: Full CRUD operations in both widgets ✅
 
 ### Missing Features
 
-- [ ] **9.1 Add New Record in One2Many**
+- [x] **9.1 Add New Record in One2Many** ✅ COMPLETED
   - Location: `src/tryton/registry/widgets/One2ManyWidget.jsx`
-  - Add button to create new related records
-  - Inline form or modal for new record
-  - Save to parent record
+  - New button creates new related records
+  - Modal FormDialog for new record
+  - Save to parent record relationship
   - Reference: `/home/user/tryton/sao/src/view/form.js` (One2Many class)
 
-- [ ] **9.2 Edit Existing Record in One2Many**
+- [x] **9.2 Edit Existing Record in One2Many** ✅ COMPLETED
   - Location: `src/tryton/registry/widgets/One2ManyWidget.jsx`
-  - Edit button or double-click to edit
-  - Inline editing or modal form
-  - Save changes
+  - Edit button on each row
+  - Modal FormDialog for editing
+  - Save changes functionality
   - Reference: `/home/user/tryton/sao/src/view/form.js`
 
-- [ ] **9.3 Add Existing Records in Many2Many**
+- [x] **9.3 Add Existing Records in Many2Many** ✅ COMPLETED
   - Location: `src/tryton/registry/widgets/Many2ManyWidget.jsx`
   - Add button to select existing records
-  - Search/select modal
+  - SearchDialog modal with multi-select
   - Add to relationship
   - Reference: `/home/user/tryton/sao/src/view/form.js` (Many2Many class)
 

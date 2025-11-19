@@ -29,6 +29,8 @@ import BinaryWidget from './widgets/BinaryWidget';
 import ImageWidget from './widgets/ImageWidget';
 import HTMLWidget from './widgets/HTMLWidget';
 import ProgressBarWidget from './widgets/ProgressBarWidget';
+import TimeDeltaWidget from './widgets/TimeDeltaWidget';
+import ReferenceWidget from './widgets/ReferenceWidget';
 
 // Widget registry mapping Tryton types to React components
 const widgetRegistry = {
@@ -49,6 +51,7 @@ const widgetRegistry = {
   date: DateWidget,
   datetime: DateTimeWidget,
   time: TimeWidget,
+  timedelta: TimeDeltaWidget, // Duration/time difference
 
   // Selection (dropdown)
   selection: SelectionWidget,
@@ -58,6 +61,7 @@ const widgetRegistry = {
   many2one: Many2OneWidget,
   one2many: One2ManyWidget,
   many2many: Many2ManyWidget,
+  reference: ReferenceWidget, // Dynamic model reference
 
   // Link/Contact widgets
   url: URLWidget,
