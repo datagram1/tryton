@@ -1,0 +1,39 @@
+# Python
+*.py[cdo]
+*.egg-info
+__pycache__/
+dist/
+build/
+
+# Node.js
+node_modules/
+bower_components/
+
+# Testing
+.tox/
+
+# Dependencies
+requirements.txt
+requirements-dev.txt
+
+# web-client-next specific
+web-client-next/node_modules/
+web-client-next/dist/
+web-client-next/.env.local
+
+# Virtual environment
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+*.log
+
+# Mercurial
+.hg/
+.hgignore-modules
