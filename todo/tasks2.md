@@ -33,7 +33,7 @@ Currently implemented: char, integer, float, boolean, date, datetime, selection,
 
 ### Missing Basic Widgets
 
-- [ ] **1.1 Password Widget**
+- [x] **1.1 Password Widget** ✅ COMPLETED
   - File: `src/tryton/registry/widgets/PasswordWidget.jsx`
   - Password input with masking
   - Show/hide password toggle
@@ -46,7 +46,7 @@ Currently implemented: char, integer, float, boolean, date, datetime, selection,
   - Hex color validation
   - Reference: `/home/user/tryton/sao/src/view/form.js` (color field)
 
-- [ ] **1.3 Text Widget (Multi-line)**
+- [x] **1.3 Text Widget (Multi-line)** ✅ COMPLETED
   - File: Update `src/tryton/registry/widgets/CharWidget.jsx` to support text type
   - Multi-line textarea
   - Auto-resize option
@@ -60,7 +60,7 @@ Currently implemented: char, integer, float, boolean, date, datetime, selection,
   - Consider: TinyMCE, CKEditor, or Quill.js
   - Reference: `/home/user/tryton/sao/src/view/form.js` (richtext field)
 
-- [ ] **1.5 Time Widget**
+- [x] **1.5 Time Widget** ✅ COMPLETED
   - File: `src/tryton/registry/widgets/TimeWidget.jsx`
   - Time picker (HH:MM:SS format)
   - Time format validation
@@ -247,34 +247,34 @@ Currently implemented: Save, Cancel, New (in FormView only)
 
 ### Missing Core Actions
 
-- [ ] **3.1 Delete Button**
+- [x] **3.1 Delete Button** ✅ COMPLETED
   - Location: `src/components/FormToolbar.jsx`
   - Delete current record with confirmation dialog
   - Keyboard shortcut: Ctrl+D
   - RPC: `delete` method
   - Handle delete errors gracefully
 
-- [ ] **3.2 Duplicate Button**
+- [x] **3.2 Duplicate Button** ✅ COMPLETED
   - Location: `src/components/FormToolbar.jsx`
   - Copy current record
   - Keyboard shortcut: Ctrl+Shift+D
   - RPC: `copy` method
   - Open duplicated record in new tab or same view
 
-- [ ] **3.3 Previous/Next Navigation**
+- [x] **3.3 Previous/Next Navigation** ✅ COMPLETED
   - Location: `src/components/FormToolbar.jsx`
   - Navigate between records in current list
   - Keyboard shortcuts: Ctrl+Up (previous), Ctrl+Down (next)
   - Update form data without closing tab
   - Maintain position in list
 
-- [ ] **3.4 Reload/Undo Button**
+- [x] **3.4 Reload/Undo Button** ✅ COMPLETED
   - Location: `src/components/FormToolbar.jsx`
   - Reload record from server (undo unsaved changes)
   - Keyboard shortcut: Ctrl+R
   - Confirmation if dirty
 
-- [ ] **3.5 Switch View Button**
+- [x] **3.5 Switch View Button** ✅ COMPLETED
   - Location: `src/components/FormToolbar.jsx`
   - Switch between form/list views
   - Keyboard shortcut: Ctrl+L
@@ -379,13 +379,14 @@ Currently implemented: Save, Cancel, New (in FormView only)
 
 ### Priority: HIGH
 
-Currently implemented: None (List view has no search)
+Currently implemented: Search Box with debouncing
 
-- [ ] **4.1 Search Box in List View**
+- [x] **4.1 Search Box in List View** ✅ COMPLETED
   - Location: `src/components/ListView.jsx`
   - Full-text search input
-  - Real-time search as you type
+  - Real-time search as you type (with 500ms debounce)
   - Keyboard shortcut: Ctrl+F
+  - Searches across all char and text fields
 
 - [ ] **4.2 Domain Parser**
   - File: `src/tryton/search/DomainParser.js`

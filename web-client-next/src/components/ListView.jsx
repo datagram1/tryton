@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Container, Table, Spinner, Alert, Button, ButtonGroup, Pagination } from 'react-bootstrap';
-import { FaPlus, FaEdit, FaTrash, FaSync } from 'react-icons/fa';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Container, Table, Spinner, Alert, Button, ButtonGroup, Pagination, Form, InputGroup } from 'react-bootstrap';
+import { FaPlus, FaEdit, FaTrash, FaSync, FaSearch, FaTimes } from 'react-icons/fa';
 import {
   useReactTable,
   getCoreRowModel,
@@ -30,6 +30,58 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
   const [offset, setOffset] = useState(0);
   const [total, setTotal] = useState(0);
   const [sorting, setSorting] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const searchDebounceTimer = useRef(null);
+
+  /**
+   * Debounce search query
+   */
+  useEffect(() => {
+    // Clear existing timer
+    if (searchDebounceTimer.current) {
+      clearTimeout(searchDebounceTimer.current);
+    }
+
+    // Set new timer
+    searchDebounceTimer.current = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+      setOffset(0); // Reset to first page when searching
+    }, 500); // 500ms debounce
+
+    // Cleanup
+    return () => {
+      if (searchDebounceTimer.current) {
+        clearTimeout(searchDebounceTimer.current);
+      }
+    };
+  }, [searchQuery]);
+
+  /**
+   * Build search domain based on search query
+   */
+  const buildSearchDomain = useCallback((baseDomain, searchText, searchFields) => {
+    if (!searchText || !searchFields || searchFields.length === 0) {
+      return baseDomain;
+    }
+
+    // Create OR clause for searching across all searchable fields
+    // Domain format: ['OR', ['field1', 'ilike', '%text%'], ['field2', 'ilike', '%text%'], ...]
+    const searchClauses = searchFields.map(fieldName => [
+      fieldName,
+      'ilike',
+      `%${searchText}%`
+    ]);
+
+    // Combine base domain with search clauses
+    if (searchClauses.length === 1) {
+      return [...baseDomain, searchClauses[0]];
+    } else if (searchClauses.length > 1) {
+      return [...baseDomain, ['OR', ...searchClauses]];
+    }
+
+    return baseDomain;
+  }, []);
 
   /**
    * Load view definition and records
@@ -85,8 +137,17 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
 
         setColumns(cols);
 
-        // 5. Search and read records
-        await loadRecords(modelName, domain, offset, limit, visibleFields);
+        // 5. Get searchable fields (char, text fields)
+        const searchableFields = Object.keys(viewResult.fields).filter(fieldName => {
+          const field = viewResult.fields[fieldName];
+          return field && ['char', 'text'].includes(field.type);
+        });
+
+        // 6. Build search domain
+        const searchDomain = buildSearchDomain(domain, debouncedSearchQuery, searchableFields);
+
+        // 7. Search and read records
+        await loadRecords(modelName, searchDomain, offset, limit, visibleFields);
       } catch (err) {
         console.error('Error loading view/data:', err);
         setError(err.message || 'Failed to load list view');
@@ -96,7 +157,7 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
     };
 
     loadViewAndData();
-  }, [modelName, viewId, sessionId, database, offset]);
+  }, [modelName, viewId, sessionId, database, offset, debouncedSearchQuery, domain, buildSearchDomain]);
 
   /**
    * Load records from server
@@ -214,7 +275,11 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
     if (onRecordClick) {
       onRecordClick(record);
     } else {
-      // Open form view in new tab
+      // Get list of all record IDs for navigation
+      const recordIds = records.map(r => r.id);
+      const currentIndex = recordIds.indexOf(record.id);
+
+      // Open form view in new tab with list context
       openTab({
         id: `form-${modelName}-${record.id}`,
         title: `${modelName} #${record.id}`,
@@ -222,6 +287,13 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
         props: {
           modelName,
           recordId: record.id,
+          // Pass list context for prev/next navigation
+          listContext: {
+            recordIds,
+            currentIndex,
+            domain,
+            limit,
+          },
         },
       });
     }
@@ -300,17 +372,44 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
     <div className="list-view h-100 d-flex flex-column">
       {/* Toolbar */}
       <div className="border-bottom p-2 bg-light">
-        <ButtonGroup size="sm">
-          <Button variant="outline-primary" onClick={handleNew}>
-            <FaPlus className="me-1" /> New
-          </Button>
-          <Button variant="outline-secondary" onClick={handleRefresh}>
-            <FaSync className="me-1" /> Refresh
-          </Button>
-        </ButtonGroup>
-        <span className="ms-3 text-muted small">
-          {total} record(s)
-        </span>
+        <div className="d-flex align-items-center">
+          <ButtonGroup size="sm">
+            <Button variant="outline-primary" onClick={handleNew}>
+              <FaPlus className="me-1" /> New
+            </Button>
+            <Button variant="outline-secondary" onClick={handleRefresh}>
+              <FaSync className="me-1" /> Refresh
+            </Button>
+          </ButtonGroup>
+
+          {/* Search Box */}
+          <div className="ms-3 flex-grow-1" style={{ maxWidth: '400px' }}>
+            <InputGroup size="sm">
+              <InputGroup.Text>
+                <FaSearch />
+              </InputGroup.Text>
+              <Form.Control
+                type="text"
+                placeholder="Search records... (Ctrl+F)"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              {searchQuery && (
+                <Button
+                  variant="outline-secondary"
+                  onClick={() => setSearchQuery('')}
+                  title="Clear search"
+                >
+                  <FaTimes />
+                </Button>
+              )}
+            </InputGroup>
+          </div>
+
+          <span className="ms-auto text-muted small">
+            {total} record(s)
+          </span>
+        </div>
       </div>
 
       {/* Table */}

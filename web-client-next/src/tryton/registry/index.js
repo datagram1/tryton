@@ -17,12 +17,15 @@ import LabelWidget from './widgets/LabelWidget';
 import Many2OneWidget from './widgets/Many2OneWidget';
 import One2ManyWidget from './widgets/One2ManyWidget';
 import Many2ManyWidget from './widgets/Many2ManyWidget';
+import PasswordWidget from './widgets/PasswordWidget';
+import TimeWidget from './widgets/TimeWidget';
 
 // Widget registry mapping Tryton types to React components
 const widgetRegistry = {
   // Text types
   char: CharWidget,
-  text: CharWidget, // Multi-line text uses same widget for now
+  text: CharWidget, // Multi-line text uses CharWidget with textarea
+  password: PasswordWidget,
 
   // Numeric types
   integer: IntegerWidget,
@@ -35,7 +38,7 @@ const widgetRegistry = {
   // Date/Time types
   date: DateWidget,
   datetime: DateTimeWidget,
-  time: DateTimeWidget, // Time fields can use datetime widget
+  time: TimeWidget,
 
   // Selection (dropdown)
   selection: SelectionWidget,
