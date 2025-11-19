@@ -266,6 +266,18 @@ export const rpc = {
    */
   fieldsViewGet: (modelName, viewId, viewType, sessionId, database) =>
     call(`model.${modelName}.fields_view_get`, [viewId, viewType], sessionId, database),
+
+  /**
+   * Get default values for a new record
+   * @param {string} modelName - Model name (e.g., 'party.party')
+   * @param {Array<string>} fields - List of field names to get defaults for
+   * @param {string} sessionId - Session ID
+   * @param {string} database - Database name
+   * @param {Object} context - Optional context object (can include default_FIELDNAME values)
+   * @returns {Promise<Object>} - Object mapping field names to default values
+   */
+  defaultGet: (modelName, fields, sessionId, database, context = {}) =>
+    call(`model.${modelName}.default_get`, [fields, context], sessionId, database),
 };
 
 export default rpc;

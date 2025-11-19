@@ -83,10 +83,39 @@ function FormView({ modelName, recordId, viewId = null }) {
             setOriginalData(records[0]);
           }
         } else {
-          // New record - initialize with default values
-          const defaultData = { id: null };
-          setRecordData(defaultData);
-          setOriginalData(defaultData);
+          // New record - get default values from server
+          console.log('[FormView] Creating new record, fetching defaults...');
+          const fieldNames = Object.keys(viewResult.fields);
+
+          try {
+            const defaults = await rpc.defaultGet(
+              modelName,
+              fieldNames,
+              sessionId,
+              database,
+              {} // context - can be extended with default_FIELDNAME values
+            );
+
+            console.log('[FormView] Received defaults:', defaults);
+
+            // Initialize record with defaults and null id
+            const defaultData = {
+              id: null,
+              ...defaults,
+            };
+
+            setRecordData(defaultData);
+            setOriginalData(defaultData);
+            // Mark as dirty so user can save with defaults
+            setIsDirty(true);
+          } catch (err) {
+            console.error('[FormView] Error fetching defaults:', err);
+            // Fallback to empty record if default_get fails
+            const defaultData = { id: null };
+            setRecordData(defaultData);
+            setOriginalData(defaultData);
+            setIsDirty(true);
+          }
         }
       } catch (err) {
         console.error('Error loading view/data:', err);
