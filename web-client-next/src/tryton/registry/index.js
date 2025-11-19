@@ -17,17 +17,32 @@ import LabelWidget from './widgets/LabelWidget';
 import Many2OneWidget from './widgets/Many2OneWidget';
 import One2ManyWidget from './widgets/One2ManyWidget';
 import Many2ManyWidget from './widgets/Many2ManyWidget';
+import PasswordWidget from './widgets/PasswordWidget';
+import TimeWidget from './widgets/TimeWidget';
+import URLWidget from './widgets/URLWidget';
+import EmailWidget from './widgets/EmailWidget';
+import ColorWidget from './widgets/ColorWidget';
+import CallToWidget from './widgets/CallToWidget';
+import NumericWidget from './widgets/NumericWidget';
+import MultiSelectionWidget from './widgets/MultiSelectionWidget';
+import BinaryWidget from './widgets/BinaryWidget';
+import ImageWidget from './widgets/ImageWidget';
+import HTMLWidget from './widgets/HTMLWidget';
+import ProgressBarWidget from './widgets/ProgressBarWidget';
+import TimeDeltaWidget from './widgets/TimeDeltaWidget';
+import ReferenceWidget from './widgets/ReferenceWidget';
 
 // Widget registry mapping Tryton types to React components
 const widgetRegistry = {
   // Text types
   char: CharWidget,
-  text: CharWidget, // Multi-line text uses same widget for now
+  text: CharWidget, // Multi-line text uses CharWidget with textarea
+  password: PasswordWidget,
 
   // Numeric types
   integer: IntegerWidget,
   float: FloatWidget,
-  numeric: FloatWidget,
+  numeric: NumericWidget, // Arbitrary precision decimals
 
   // Boolean
   boolean: BooleanWidget,
@@ -35,15 +50,34 @@ const widgetRegistry = {
   // Date/Time types
   date: DateWidget,
   datetime: DateTimeWidget,
-  time: DateTimeWidget, // Time fields can use datetime widget
+  time: TimeWidget,
+  timedelta: TimeDeltaWidget, // Duration/time difference
 
   // Selection (dropdown)
   selection: SelectionWidget,
+  multiselection: MultiSelectionWidget, // Multiple selection with tags
 
   // Relational fields
   many2one: Many2OneWidget,
   one2many: One2ManyWidget,
   many2many: Many2ManyWidget,
+  reference: ReferenceWidget, // Dynamic model reference
+
+  // Link/Contact widgets
+  url: URLWidget,
+  email: EmailWidget,
+  callto: CallToWidget,
+
+  // Visual widgets
+  color: ColorWidget,
+
+  // Binary/Media widgets
+  binary: BinaryWidget, // File upload/download
+  image: ImageWidget, // Image upload with preview
+
+  // Special/Display widgets
+  html: HTMLWidget, // HTML content display (read-only)
+  progressbar: ProgressBarWidget, // Progress bar display (read-only)
 
   // Layout widgets
   label: LabelWidget,

@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Container, Table, Spinner, Alert, Button, ButtonGroup, Pagination } from 'react-bootstrap';
-import { FaPlus, FaEdit, FaTrash, FaSync } from 'react-icons/fa';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Container, Table, Spinner, Alert, Button, ButtonGroup, Pagination, Form, InputGroup } from 'react-bootstrap';
+import { FaPlus, FaEdit, FaTrash, FaSync, FaSearch, FaTimes } from 'react-icons/fa';
 import {
   useReactTable,
   getCoreRowModel,
@@ -30,6 +30,60 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
   const [offset, setOffset] = useState(0);
   const [total, setTotal] = useState(0);
   const [sorting, setSorting] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const searchDebounceTimer = useRef(null);
+  const [selectedRows, setSelectedRows] = useState(new Set());
+  const [rowSelection, setRowSelection] = useState({});
+
+  /**
+   * Debounce search query
+   */
+  useEffect(() => {
+    // Clear existing timer
+    if (searchDebounceTimer.current) {
+      clearTimeout(searchDebounceTimer.current);
+    }
+
+    // Set new timer
+    searchDebounceTimer.current = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+      setOffset(0); // Reset to first page when searching
+    }, 500); // 500ms debounce
+
+    // Cleanup
+    return () => {
+      if (searchDebounceTimer.current) {
+        clearTimeout(searchDebounceTimer.current);
+      }
+    };
+  }, [searchQuery]);
+
+  /**
+   * Build search domain based on search query
+   */
+  const buildSearchDomain = useCallback((baseDomain, searchText, searchFields) => {
+    if (!searchText || !searchFields || searchFields.length === 0) {
+      return baseDomain;
+    }
+
+    // Create OR clause for searching across all searchable fields
+    // Domain format: ['OR', ['field1', 'ilike', '%text%'], ['field2', 'ilike', '%text%'], ...]
+    const searchClauses = searchFields.map(fieldName => [
+      fieldName,
+      'ilike',
+      `%${searchText}%`
+    ]);
+
+    // Combine base domain with search clauses
+    if (searchClauses.length === 1) {
+      return [...baseDomain, searchClauses[0]];
+    } else if (searchClauses.length > 1) {
+      return [...baseDomain, ['OR', ...searchClauses]];
+    }
+
+    return baseDomain;
+  }, []);
 
   /**
    * Load view definition and records
@@ -85,8 +139,17 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
 
         setColumns(cols);
 
-        // 5. Search and read records
-        await loadRecords(modelName, domain, offset, limit, visibleFields);
+        // 5. Get searchable fields (char, text fields)
+        const searchableFields = Object.keys(viewResult.fields).filter(fieldName => {
+          const field = viewResult.fields[fieldName];
+          return field && ['char', 'text'].includes(field.type);
+        });
+
+        // 6. Build search domain
+        const searchDomain = buildSearchDomain(domain, debouncedSearchQuery, searchableFields);
+
+        // 7. Search and read records
+        await loadRecords(modelName, searchDomain, offset, limit, visibleFields);
       } catch (err) {
         console.error('Error loading view/data:', err);
         setError(err.message || 'Failed to load list view');
@@ -96,7 +159,7 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
     };
 
     loadViewAndData();
-  }, [modelName, viewId, sessionId, database, offset]);
+  }, [modelName, viewId, sessionId, database, offset, debouncedSearchQuery, domain, buildSearchDomain]);
 
   /**
    * Load records from server
@@ -214,7 +277,11 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
     if (onRecordClick) {
       onRecordClick(record);
     } else {
-      // Open form view in new tab
+      // Get list of all record IDs for navigation
+      const recordIds = records.map(r => r.id);
+      const currentIndex = recordIds.indexOf(record.id);
+
+      // Open form view in new tab with list context
       openTab({
         id: `form-${modelName}-${record.id}`,
         title: `${modelName} #${record.id}`,
@@ -222,6 +289,13 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
         props: {
           modelName,
           recordId: record.id,
+          // Pass list context for prev/next navigation
+          listContext: {
+            recordIds,
+            currentIndex,
+            domain,
+            limit,
+          },
         },
       });
     }
@@ -244,6 +318,61 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
   };
 
   /**
+   * Handle row selection changes
+   */
+  const handleSelectRow = useCallback((recordId) => {
+    setSelectedRows(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(recordId)) {
+        newSet.delete(recordId);
+      } else {
+        newSet.add(recordId);
+      }
+      return newSet;
+    });
+  }, []);
+
+  /**
+   * Handle select all rows
+   */
+  const handleSelectAll = useCallback(() => {
+    if (selectedRows.size === records.length) {
+      // Deselect all
+      setSelectedRows(new Set());
+    } else {
+      // Select all visible records
+      setSelectedRows(new Set(records.map(r => r.id)));
+    }
+  }, [records, selectedRows]);
+
+  /**
+   * Handle delete selected rows
+   */
+  const handleDeleteSelected = useCallback(async () => {
+    if (selectedRows.size === 0) return;
+
+    const confirmed = window.confirm(
+      `Are you sure you want to delete ${selectedRows.size} record(s)? This action cannot be undone.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setIsLoading(true);
+      await rpc.delete(modelName, Array.from(selectedRows), sessionId, database);
+
+      // Clear selection and reload
+      setSelectedRows(new Set());
+      setOffset(0);
+      window.location.reload();
+    } catch (err) {
+      console.error('Error deleting records:', err);
+      setError(err.message || 'Failed to delete records');
+      setIsLoading(false);
+    }
+  }, [selectedRows, modelName, sessionId, database]);
+
+  /**
    * Initialize table
    */
   const table = useReactTable({
@@ -251,8 +380,11 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
     columns,
     state: {
       sorting,
+      rowSelection,
     },
     onSortingChange: setSorting,
+    onRowSelectionChange: setRowSelection,
+    enableRowSelection: true,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
   });
@@ -300,17 +432,53 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
     <div className="list-view h-100 d-flex flex-column">
       {/* Toolbar */}
       <div className="border-bottom p-2 bg-light">
-        <ButtonGroup size="sm">
-          <Button variant="outline-primary" onClick={handleNew}>
-            <FaPlus className="me-1" /> New
-          </Button>
-          <Button variant="outline-secondary" onClick={handleRefresh}>
-            <FaSync className="me-1" /> Refresh
-          </Button>
-        </ButtonGroup>
-        <span className="ms-3 text-muted small">
-          {total} record(s)
-        </span>
+        <div className="d-flex align-items-center">
+          <ButtonGroup size="sm">
+            <Button variant="outline-primary" onClick={handleNew}>
+              <FaPlus className="me-1" /> New
+            </Button>
+            <Button variant="outline-secondary" onClick={handleRefresh}>
+              <FaSync className="me-1" /> Refresh
+            </Button>
+            {selectedRows.size > 0 && (
+              <Button
+                variant="outline-danger"
+                onClick={handleDeleteSelected}
+                title={`Delete ${selectedRows.size} selected record(s)`}
+              >
+                <FaTrash className="me-1" /> Delete Selected ({selectedRows.size})
+              </Button>
+            )}
+          </ButtonGroup>
+
+          {/* Search Box */}
+          <div className="ms-3 flex-grow-1" style={{ maxWidth: '400px' }}>
+            <InputGroup size="sm">
+              <InputGroup.Text>
+                <FaSearch />
+              </InputGroup.Text>
+              <Form.Control
+                type="text"
+                placeholder="Search records... (Ctrl+F)"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              {searchQuery && (
+                <Button
+                  variant="outline-secondary"
+                  onClick={() => setSearchQuery('')}
+                  title="Clear search"
+                >
+                  <FaTimes />
+                </Button>
+              )}
+            </InputGroup>
+          </div>
+
+          <span className="ms-auto text-muted small">
+            {total} record(s)
+          </span>
+        </div>
       </div>
 
       {/* Table */}
@@ -319,6 +487,15 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
           <thead className="sticky-top bg-light">
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
+                {/* Checkbox column header */}
+                <th style={{ width: '40px' }}>
+                  <Form.Check
+                    type="checkbox"
+                    checked={selectedRows.size === records.length && records.length > 0}
+                    onChange={handleSelectAll}
+                    title="Select all"
+                  />
+                </th>
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
@@ -342,11 +519,24 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
             {table.getRowModel().rows.map((row) => (
               <tr
                 key={row.id}
-                onClick={() => handleRowClick(row.original)}
-                style={{ cursor: 'pointer' }}
+                className={selectedRows.has(row.original.id) ? 'table-active' : ''}
               >
+                {/* Checkbox column */}
+                <td onClick={(e) => e.stopPropagation()}>
+                  <Form.Check
+                    type="checkbox"
+                    checked={selectedRows.has(row.original.id)}
+                    onChange={() => handleSelectRow(row.original.id)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </td>
+                {/* Data columns */}
                 {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id}>
+                  <td
+                    key={cell.id}
+                    onClick={() => handleRowClick(row.original)}
+                    style={{ cursor: 'pointer' }}
+                  >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </td>
                 ))}

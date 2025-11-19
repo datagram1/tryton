@@ -13,9 +13,9 @@ import { useFormValidation } from '../hooks/useFormValidation';
  * FormView Component
  * Container for displaying and editing a single Tryton record
  */
-function FormView({ modelName, recordId, viewId = null }) {
+function FormView({ modelName, recordId, viewId = null, listContext = null }) {
   const { sessionId, database } = useSessionStore();
-  const { openTab } = useTabsStore();
+  const { openTab, updateTab, activeTabId } = useTabsStore();
 
   // State
   const [viewDefinition, setViewDefinition] = useState(null);
@@ -254,6 +254,206 @@ function FormView({ modelName, recordId, viewId = null }) {
   }, [modelName, openTab]);
 
   /**
+   * Handle delete record button click
+   */
+  const handleDelete = useCallback(async () => {
+    if (!recordId) {
+      setError('Cannot delete a record that has not been saved yet');
+      return;
+    }
+
+    // Confirmation dialog
+    const confirmed = window.confirm(
+      'Are you sure you want to delete this record? This action cannot be undone.'
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      setError(null);
+
+      // Delete the record
+      await rpc.delete(modelName, [recordId], sessionId, database);
+
+      // Close the current tab (or navigate back)
+      // For now, show a success message
+      alert('Record deleted successfully');
+
+      // TODO: Close the current tab or navigate to list view
+      window.history.back();
+    } catch (err) {
+      console.error('Error deleting record:', err);
+      setError(err.message || 'Failed to delete record');
+      setIsSaving(false);
+    }
+  }, [modelName, recordId, sessionId, database]);
+
+  /**
+   * Handle duplicate record button click
+   */
+  const handleDuplicate = useCallback(async () => {
+    if (!recordId) {
+      setError('Cannot duplicate a record that has not been saved yet');
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      setError(null);
+
+      // Copy the record
+      const newIds = await rpc.copy(modelName, [recordId], sessionId, database);
+
+      if (newIds && newIds.length > 0) {
+        const newId = newIds[0];
+
+        // Open the duplicated record in a new tab
+        openTab({
+          id: `form-${modelName}-${newId}-${Date.now()}`,
+          title: `${modelName} - ${newId} (Copy)`,
+          type: 'form',
+          props: {
+            modelName,
+            recordId: newId,
+          },
+        });
+      }
+    } catch (err) {
+      console.error('Error duplicating record:', err);
+      setError(err.message || 'Failed to duplicate record');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [modelName, recordId, sessionId, database, openTab]);
+
+  /**
+   * Handle reload record button click
+   */
+  const handleReload = useCallback(async () => {
+    if (!recordId) {
+      // For new records, just reset to defaults
+      handleCancel();
+      return;
+    }
+
+    // Confirmation if there are unsaved changes
+    if (isDirty) {
+      const confirmed = window.confirm(
+        'You have unsaved changes. Are you sure you want to reload and lose your changes?'
+      );
+
+      if (!confirmed) {
+        return;
+      }
+    }
+
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      // Reload the record from server
+      const records = await rpc.read(
+        modelName,
+        [recordId],
+        Object.keys(fields),
+        sessionId,
+        database
+      );
+
+      if (records && records.length > 0) {
+        setRecordData(records[0]);
+        setOriginalData(records[0]);
+        setIsDirty(false);
+      }
+    } catch (err) {
+      console.error('Error reloading record:', err);
+      setError(err.message || 'Failed to reload record');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [recordId, modelName, fields, sessionId, database, isDirty, handleCancel]);
+
+  /**
+   * Handle switch view button click
+   */
+  const handleSwitchView = useCallback(() => {
+    // Switch to list view
+    openTab({
+      id: `list-${modelName}-${Date.now()}`,
+      title: modelName,
+      type: 'list',
+      props: {
+        modelName,
+      },
+    });
+  }, [modelName, openTab]);
+
+  /**
+   * Handle previous record navigation
+   */
+  const handlePrevious = useCallback(() => {
+    if (!listContext || !listContext.recordIds) {
+      return;
+    }
+
+    const { recordIds, currentIndex } = listContext;
+
+    if (currentIndex > 0) {
+      const prevRecordId = recordIds[currentIndex - 1];
+
+      // Update the current tab to show the previous record
+      if (activeTabId) {
+        updateTab(activeTabId, {
+          id: `form-${modelName}-${prevRecordId}`,
+          title: `${modelName} #${prevRecordId}`,
+          props: {
+            modelName,
+            recordId: prevRecordId,
+            listContext: {
+              ...listContext,
+              currentIndex: currentIndex - 1,
+            },
+          },
+        });
+      }
+    }
+  }, [listContext, modelName, activeTabId, updateTab]);
+
+  /**
+   * Handle next record navigation
+   */
+  const handleNext = useCallback(() => {
+    if (!listContext || !listContext.recordIds) {
+      return;
+    }
+
+    const { recordIds, currentIndex } = listContext;
+
+    if (currentIndex < recordIds.length - 1) {
+      const nextRecordId = recordIds[currentIndex + 1];
+
+      // Update the current tab to show the next record
+      if (activeTabId) {
+        updateTab(activeTabId, {
+          id: `form-${modelName}-${nextRecordId}`,
+          title: `${modelName} #${nextRecordId}`,
+          props: {
+            modelName,
+            recordId: nextRecordId,
+            listContext: {
+              ...listContext,
+              currentIndex: currentIndex + 1,
+            },
+          },
+        });
+      }
+    }
+  }, [listContext, modelName, activeTabId, updateTab]);
+
+  /**
    * Handle button clicks
    */
   const handleButtonClick = useCallback(async (buttonName) => {
@@ -324,9 +524,16 @@ function FormView({ modelName, recordId, viewId = null }) {
         onSave={handleSave}
         onCancel={handleCancel}
         onNew={handleNew}
+        onDelete={handleDelete}
+        onDuplicate={handleDuplicate}
+        onReload={handleReload}
+        onSwitchView={handleSwitchView}
+        onPrevious={listContext ? handlePrevious : null}
+        onNext={listContext ? handleNext : null}
         isDirty={isDirty}
         isSaving={isSaving || isValidating}
         hasErrors={hasErrors}
+        hasRecord={!!recordId}
       />
 
       {/* Display form-level validation errors */}
