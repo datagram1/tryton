@@ -1,0 +1,17 @@
+.image-component {
+  display: inline-block;
+  object-fit: contain;
+  margin: 0.25rem;
+}
+
+.image-color {
+  border: 1px solid #dee2e6;
+}
+
+.image-component.rounded {
+  border-radius: 0.25rem;
+}
+
+.image-component.rounded-circle {
+  border-radius: 50%;
+}

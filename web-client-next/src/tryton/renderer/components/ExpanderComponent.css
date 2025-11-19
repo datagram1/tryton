@@ -1,0 +1,53 @@
+.expander-component {
+  border: 1px solid #dee2e6;
+}
+
+.expander-header {
+  background-color: #f8f9fa;
+  cursor: pointer;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #dee2e6;
+  user-select: none;
+  transition: background-color 0.2s;
+}
+
+.expander-header:hover {
+  background-color: #e9ecef;
+}
+
+.expander-header:focus {
+  outline: 2px solid #0d6efd;
+  outline-offset: -2px;
+}
+
+.expander-title {
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  color: #212529;
+}
+
+.expander-arrow {
+  display: inline-block;
+  margin-right: 0.5rem;
+  font-size: 0.75rem;
+  transition: transform 0.2s;
+  transform: rotate(0deg);
+}
+
+.expander-arrow.expanded {
+  transform: rotate(90deg);
+}
+
+.expander-label {
+  flex: 1;
+}
+
+.expander-body {
+  padding: 1rem;
+}
+
+/* No bottom border on last expander in collapsed state */
+.expander-component .collapse:not(.show) + .expander-header {
+  border-bottom: none;
+}

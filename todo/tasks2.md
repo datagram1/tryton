@@ -521,38 +521,43 @@ Currently implemented: form, group, notebook, page, separator, label, field, but
 
 ### Missing Layout Components
 
-- [ ] **7.1 Paned Component (Horizontal/Vertical)**
+- [x] **7.1 Paned Component (Horizontal/Vertical)** ✅ COMPLETED
   - File: `src/tryton/renderer/components/PanedComponent.jsx`
   - Splittable panes with draggable divider
   - Horizontal and vertical orientation
-  - Resizable panels
+  - Resizable panels with mouse drag
   - Reference: `/home/user/tryton/sao/src/view/form.js`
 
-- [ ] **7.2 Expander Component**
+- [x] **7.2 Expander Component** ✅ COMPLETED
   - File: `src/tryton/renderer/components/ExpanderComponent.jsx`
   - Collapsible section with expand/collapse
   - Header with arrow indicator
-  - Expand state persistence
+  - Bootstrap Collapse integration
+  - Keyboard accessible (Enter/Space to toggle)
   - Reference: `/home/user/tryton/sao/src/view/form.js`
 
-- [ ] **7.3 Container Component Enhancements**
+- [x] **7.3 Container Component Enhancements** ✅ COMPLETED
   - Location: `src/tryton/renderer/TrytonViewRenderer.jsx`
   - Better grid layout support
   - Column spanning (colspan attribute)
   - Row positioning (yexpand, yfill attributes)
   - Reference: `/home/user/tryton/sao/src/view/form.js` (Container class)
 
-- [ ] **7.4 Link Component**
+- [x] **7.4 Link Component** ✅ COMPLETED
   - File: `src/tryton/renderer/components/LinkComponent.jsx`
   - Clickable hyperlinks in forms
-  - External URL support
+  - External URL support (opens in new tab)
   - Icon support
+  - Action execution support
   - Reference: `/home/user/tryton/sao/src/view/form.js`
 
-- [ ] **7.5 Image Component**
+- [x] **7.5 Image Component** ✅ COMPLETED
   - File: `src/tryton/renderer/components/ImageComponent.jsx`
   - Static image display in forms
   - Image sizing attributes
+  - Border styles (rounded, circle)
+  - Support for URL, color, and icon types
+  - URL size parameter support
   - Reference: `/home/user/tryton/sao/src/view/form.js`
 
 ---
