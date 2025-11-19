@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Container, Table, Spinner, Alert, Button, ButtonGroup, Pagination, Form, InputGroup } from 'react-bootstrap';
-import { FaPlus, FaEdit, FaTrash, FaSync, FaSearch, FaTimes } from 'react-icons/fa';
+import { Container, Table, Spinner, Alert, Button, ButtonGroup, Pagination, Form, InputGroup, Dropdown, DropdownButton, Modal } from 'react-bootstrap';
+import { FaPlus, FaEdit, FaTrash, FaSync, FaSearch, FaTimes, FaFileExport, FaEllipsisV, FaChevronRight, FaChevronDown, FaGripVertical, FaColumns } from 'react-icons/fa';
 import {
   useReactTable,
   getCoreRowModel,
   flexRender,
   getSortedRowModel,
+  getExpandedRowModel,
 } from '@tanstack/react-table';
 import { parseAndNormalizeView } from '../tryton/parsers/xml';
 import rpc from '../api/rpc';
@@ -35,6 +36,29 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
   const searchDebounceTimer = useRef(null);
   const [selectedRows, setSelectedRows] = useState(new Set());
   const [rowSelection, setRowSelection] = useState({});
+
+  // Column visibility state
+  const [columnVisibility, setColumnVisibility] = useState({});
+
+  // Column resizing state
+  const [columnWidths, setColumnWidths] = useState({});
+  const resizingColumn = useRef(null);
+
+  // Expanded rows for tree structure
+  const [expanded, setExpanded] = useState({});
+
+  // Inline editing state
+  const [editingCell, setEditingCell] = useState(null); // { rowId, columnId, value }
+
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState(null); // { x, y, record }
+
+  // Aggregation data
+  const [aggregations, setAggregations] = useState({});
+
+  // Infinite scroll state
+  const [hasMore, setHasMore] = useState(true);
+  const infiniteScrollObserver = useRef(null);
 
   /**
    * Debounce search query
@@ -373,6 +397,250 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
   }, [selectedRows, modelName, sessionId, database]);
 
   /**
+   * 8.9 Export to CSV
+   */
+  const handleExportToCSV = useCallback(() => {
+    if (records.length === 0) return;
+
+    // Create CSV header
+    const headers = columns.map(col => col.header).join(',');
+
+    // Create CSV rows
+    const rows = records.map(record => {
+      return columns.map(col => {
+        const value = record[col.accessorKey];
+        const formattedValue = formatCellValue(value, fields[col.accessorKey]?.type);
+        // Escape quotes and wrap in quotes if contains comma
+        const escaped = String(formattedValue).replace(/"/g, '""');
+        return escaped.includes(',') ? `"${escaped}"` : escaped;
+      }).join(',');
+    });
+
+    const csv = [headers, ...rows].join('\n');
+
+    // Create download link
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${modelName}_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }, [records, columns, fields, modelName]);
+
+  /**
+   * 8.2 Column Resizing Handlers
+   */
+  const handleColumnResizeStart = useCallback((e, columnId) => {
+    e.preventDefault();
+    resizingColumn.current = {
+      columnId,
+      startX: e.pageX,
+      startWidth: e.target.parentElement.offsetWidth,
+    };
+
+    const handleMouseMove = (e) => {
+      if (!resizingColumn.current) return;
+      const { columnId, startX, startWidth } = resizingColumn.current;
+      const diff = e.pageX - startX;
+      const newWidth = Math.max(50, startWidth + diff);
+      setColumnWidths(prev => ({ ...prev, [columnId]: newWidth }));
+    };
+
+    const handleMouseUp = () => {
+      resizingColumn.current = null;
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, []);
+
+  /**
+   * 8.1 Tree Expansion Handlers
+   */
+  const handleToggleExpand = useCallback((recordId) => {
+    setExpanded(prev => ({
+      ...prev,
+      [recordId]: !prev[recordId],
+    }));
+  }, []);
+
+  /**
+   * 8.6 Inline Cell Editing Handlers
+   */
+  const handleCellDoubleClick = useCallback((record, column) => {
+    // Only allow editing for certain field types
+    const field = fields[column.accessorKey];
+    if (!field || field.readonly) return;
+
+    const editableTypes = ['char', 'text', 'integer', 'float', 'numeric'];
+    if (!editableTypes.includes(field.type)) return;
+
+    setEditingCell({
+      rowId: record.id,
+      columnId: column.accessorKey,
+      value: record[column.accessorKey] || '',
+    });
+  }, [fields]);
+
+  const handleCellEditChange = useCallback((e) => {
+    setEditingCell(prev => ({
+      ...prev,
+      value: e.target.value,
+    }));
+  }, []);
+
+  const handleCellEditSave = useCallback(async () => {
+    if (!editingCell) return;
+
+    try {
+      const { rowId, columnId, value } = editingCell;
+      await rpc.write(modelName, [rowId], { [columnId]: value }, sessionId, database);
+
+      // Update local record
+      setRecords(prev => prev.map(r =>
+        r.id === rowId ? { ...r, [columnId]: value } : r
+      ));
+
+      setEditingCell(null);
+    } catch (err) {
+      console.error('Error saving cell edit:', err);
+      setError(err.message || 'Failed to save edit');
+    }
+  }, [editingCell, modelName, sessionId, database]);
+
+  const handleCellEditCancel = useCallback(() => {
+    setEditingCell(null);
+  }, []);
+
+  /**
+   * 8.8 Context Menu Handlers
+   */
+  const handleContextMenu = useCallback((e, record) => {
+    e.preventDefault();
+    setContextMenu({
+      x: e.pageX,
+      y: e.pageY,
+      record,
+    });
+  }, []);
+
+  const handleCloseContextMenu = useCallback(() => {
+    setContextMenu(null);
+  }, []);
+
+  /**
+   * 8.4 Calculate Aggregations
+   */
+  useEffect(() => {
+    if (records.length === 0) return;
+
+    const newAggregations = {};
+
+    columns.forEach(col => {
+      const field = fields[col.accessorKey];
+      if (!field) return;
+
+      // Only aggregate numeric fields
+      if (['integer', 'float', 'numeric'].includes(field.type)) {
+        const values = records
+          .map(r => r[col.accessorKey])
+          .filter(v => v !== null && v !== undefined && !isNaN(v));
+
+        if (values.length > 0) {
+          const sum = values.reduce((acc, val) => acc + Number(val), 0);
+          const avg = sum / values.length;
+          newAggregations[col.accessorKey] = {
+            sum: sum.toFixed(2),
+            avg: avg.toFixed(2),
+            count: values.length,
+          };
+        }
+      }
+    });
+
+    setAggregations(newAggregations);
+  }, [records, columns, fields]);
+
+  /**
+   * 8.11 Infinite Scroll - Load more records when scrolling to bottom
+   */
+  const handleLoadMore = useCallback(async () => {
+    if (isLoading || !hasMore || records.length >= total) return;
+
+    try {
+      setIsLoading(true);
+      const newOffset = records.length;
+
+      // Get searchable fields
+      const searchableFields = Object.keys(fields).filter(fieldName => {
+        const field = fields[fieldName];
+        return field && ['char', 'text'].includes(field.type);
+      });
+
+      // Build search domain
+      const searchDomain = buildSearchDomain(domain, debouncedSearchQuery, searchableFields);
+
+      // Get visible fields
+      const visibleFields = columns.map(col => col.accessorKey);
+      if (!visibleFields.includes('id')) {
+        visibleFields.push('id');
+      }
+
+      // Load more records
+      const newRecords = await rpc.searchRead(
+        modelName,
+        searchDomain,
+        newOffset,
+        limit,
+        null,
+        visibleFields,
+        sessionId,
+        database
+      );
+
+      if (newRecords && newRecords.length > 0) {
+        setRecords(prev => [...prev, ...newRecords]);
+      }
+
+      if (!newRecords || newRecords.length < limit) {
+        setHasMore(false);
+      }
+    } catch (err) {
+      console.error('Error loading more records:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [isLoading, hasMore, records, total, fields, domain, debouncedSearchQuery, columns, modelName, sessionId, database, limit, buildSearchDomain]);
+
+  /**
+   * 8.11 Setup intersection observer for infinite scroll
+   */
+  useEffect(() => {
+    const sentinel = document.getElementById('infinite-scroll-sentinel');
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          handleLoadMore();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    observer.observe(sentinel);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [handleLoadMore]);
+
+  /**
    * Initialize table
    */
   const table = useReactTable({
@@ -381,12 +649,17 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
     state: {
       sorting,
       rowSelection,
+      columnVisibility,
+      expanded,
     },
     onSortingChange: setSorting,
     onRowSelectionChange: setRowSelection,
+    onColumnVisibilityChange: setColumnVisibility,
+    onExpandedChange: setExpanded,
     enableRowSelection: true,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    getExpandedRowModel: getExpandedRowModel(),
   });
 
   /**
@@ -449,6 +722,39 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
                 <FaTrash className="me-1" /> Delete Selected ({selectedRows.size})
               </Button>
             )}
+            {/* 8.9 Export to CSV */}
+            <Button
+              variant="outline-success"
+              onClick={handleExportToCSV}
+              disabled={records.length === 0}
+              title="Export to CSV"
+            >
+              <FaFileExport className="me-1" /> Export
+            </Button>
+            {/* 8.3 Column Visibility Toggle */}
+            <DropdownButton
+              as={ButtonGroup}
+              size="sm"
+              variant="outline-secondary"
+              title={<><FaColumns className="me-1" /> Columns</>}
+              id="column-visibility-dropdown"
+            >
+              {table.getAllLeafColumns().map(column => (
+                <Dropdown.Item
+                  key={column.id}
+                  as="div"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Form.Check
+                    type="checkbox"
+                    id={`col-${column.id}`}
+                    label={column.columnDef.header}
+                    checked={column.getIsVisible()}
+                    onChange={column.getToggleVisibilityHandler()}
+                  />
+                </Dropdown.Item>
+              ))}
+            </DropdownButton>
           </ButtonGroup>
 
           {/* Search Box */}
@@ -500,7 +806,11 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
                   <th
                     key={header.id}
                     onClick={header.column.getToggleSortingHandler()}
-                    style={{ cursor: 'pointer' }}
+                    style={{
+                      cursor: 'pointer',
+                      position: 'relative',
+                      width: columnWidths[header.id] || 'auto',
+                    }}
                   >
                     {flexRender(
                       header.column.columnDef.header,
@@ -510,6 +820,21 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
                       asc: ' 🔼',
                       desc: ' 🔽',
                     }[header.column.getIsSorted()] ?? null}
+                    {/* 8.2 Column Resizer */}
+                    <div
+                      onMouseDown={(e) => handleColumnResizeStart(e, header.id)}
+                      style={{
+                        position: 'absolute',
+                        right: 0,
+                        top: 0,
+                        bottom: 0,
+                        width: '5px',
+                        cursor: 'col-resize',
+                        userSelect: 'none',
+                        background: 'transparent',
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    />
                   </th>
                 ))}
               </tr>
@@ -520,6 +845,7 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
               <tr
                 key={row.id}
                 className={selectedRows.has(row.original.id) ? 'table-active' : ''}
+                onContextMenu={(e) => handleContextMenu(e, row.original)}
               >
                 {/* Checkbox column */}
                 <td onClick={(e) => e.stopPropagation()}>
@@ -531,23 +857,83 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
                   />
                 </td>
                 {/* Data columns */}
-                {row.getVisibleCells().map((cell) => (
-                  <td
-                    key={cell.id}
-                    onClick={() => handleRowClick(row.original)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </td>
-                ))}
+                {row.getVisibleCells().map((cell) => {
+                  const isEditing =
+                    editingCell &&
+                    editingCell.rowId === row.original.id &&
+                    editingCell.columnId === cell.column.id;
+
+                  return (
+                    <td
+                      key={cell.id}
+                      onClick={() => !isEditing && handleRowClick(row.original)}
+                      onDoubleClick={() => handleCellDoubleClick(row.original, cell.column)}
+                      style={{ cursor: isEditing ? 'text' : 'pointer' }}
+                    >
+                      {/* 8.6 Inline Cell Editing */}
+                      {isEditing ? (
+                        <Form.Control
+                          size="sm"
+                          type="text"
+                          value={editingCell.value}
+                          onChange={handleCellEditChange}
+                          onBlur={handleCellEditSave}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleCellEditSave();
+                            if (e.key === 'Escape') handleCellEditCancel();
+                          }}
+                          autoFocus
+                        />
+                      ) : (
+                        flexRender(cell.column.columnDef.cell, cell.getContext())
+                      )}
+                    </td>
+                  );
+                })}
               </tr>
             ))}
           </tbody>
+          {/* 8.4 Aggregation Footer */}
+          {Object.keys(aggregations).length > 0 && (
+            <tfoot className="bg-light">
+              <tr>
+                <th></th>
+                {table.getHeaderGroups()[0].headers.map((header) => {
+                  const agg = aggregations[header.id];
+                  return (
+                    <th key={header.id} className="small">
+                      {agg && (
+                        <div>
+                          <div>Sum: {agg.sum}</div>
+                          <div>Avg: {agg.avg}</div>
+                        </div>
+                      )}
+                    </th>
+                  );
+                })}
+              </tr>
+            </tfoot>
+          )}
         </Table>
 
         {records.length === 0 && (
           <div className="text-center p-5 text-muted">
             No records found
+          </div>
+        )}
+
+        {/* 8.11 Infinite Scroll Sentinel */}
+        {hasMore && records.length > 0 && records.length < total && (
+          <div
+            id="infinite-scroll-sentinel"
+            style={{ height: '20px', margin: '10px 0' }}
+          >
+            {isLoading && (
+              <div className="text-center">
+                <Spinner animation="border" size="sm" variant="primary" />
+                <span className="ms-2 small">Loading more...</span>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -588,6 +974,74 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
             />
           </Pagination>
         </div>
+      )}
+
+      {/* 8.8 Context Menu */}
+      {contextMenu && (
+        <>
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 1000,
+            }}
+            onClick={handleCloseContextMenu}
+          />
+          <div
+            style={{
+              position: 'fixed',
+              top: contextMenu.y,
+              left: contextMenu.x,
+              zIndex: 1001,
+              backgroundColor: 'white',
+              border: '1px solid #ccc',
+              borderRadius: '4px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+              minWidth: '180px',
+            }}
+          >
+            <div className="list-group list-group-flush">
+              <button
+                className="list-group-item list-group-item-action"
+                onClick={() => {
+                  handleRowClick(contextMenu.record);
+                  handleCloseContextMenu();
+                }}
+              >
+                <FaEdit className="me-2" /> Open
+              </button>
+              <button
+                className="list-group-item list-group-item-action"
+                onClick={() => {
+                  handleSelectRow(contextMenu.record.id);
+                  handleCloseContextMenu();
+                }}
+              >
+                {selectedRows.has(contextMenu.record.id) ? 'Deselect' : 'Select'}
+              </button>
+              <button
+                className="list-group-item list-group-item-action text-danger"
+                onClick={async () => {
+                  const confirmed = window.confirm('Are you sure you want to delete this record?');
+                  if (confirmed) {
+                    try {
+                      await rpc.delete(modelName, [contextMenu.record.id], sessionId, database);
+                      window.location.reload();
+                    } catch (err) {
+                      setError(err.message || 'Failed to delete record');
+                    }
+                  }
+                  handleCloseContextMenu();
+                }}
+              >
+                <FaTrash className="me-2" /> Delete
+              </button>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );
