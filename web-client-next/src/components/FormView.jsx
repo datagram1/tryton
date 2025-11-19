@@ -2,9 +2,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { Container, Spinner, Alert } from 'react-bootstrap';
 import TrytonViewRenderer from '../tryton/renderer/TrytonViewRenderer';
 import FormToolbar from './FormToolbar';
-import { parseXML } from '../tryton/parsers/xml';
+import { parseAndNormalizeView } from '../tryton/parsers/xml';
 import rpc from '../api/rpc';
 import useSessionStore from '../store/session';
+import { createButtonHandler } from '../tryton/actions/buttonHandler';
+import { useFormValidation } from '../hooks/useFormValidation';
 
 /**
  * FormView Component
@@ -22,6 +24,19 @@ function FormView({ modelName, recordId, viewId = null }) {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState(null);
   const [isDirty, setIsDirty] = useState(false);
+
+  // Initialize form validation
+  const {
+    validationErrors,
+    validationWarnings,
+    fieldStates,
+    isValidating,
+    hasErrors,
+    validateAll,
+    preValidate,
+    handleFieldChange: handleValidatedFieldChange,
+    getFieldValidationProps,
+  } = useFormValidation(modelName, fields, recordData, sessionId, database);
 
   /**
    * Load view definition and record data
@@ -46,7 +61,7 @@ function FormView({ modelName, recordId, viewId = null }) {
         );
 
         // 2. Parse the XML architecture
-        const parsedView = parseXML(viewResult.arch);
+        const parsedView = parseAndNormalizeView(viewResult.arch);
 
         setViewDefinition(parsedView);
         setFields(viewResult.fields || {});
@@ -83,23 +98,43 @@ function FormView({ modelName, recordId, viewId = null }) {
   }, [modelName, recordId, viewId, sessionId, database]);
 
   /**
-   * Handle field value changes
+   * Handle field value changes with validation
    */
-  const handleFieldChange = useCallback((fieldName, value) => {
-    setRecordData((prev) => {
-      const updated = { ...prev, [fieldName]: value };
-      return updated;
-    });
-    setIsDirty(true);
-  }, []);
+  const handleFieldChange = useCallback(async (fieldName, value) => {
+    // Update record data via callback
+    const updateRecord = (field, val) => {
+      setRecordData((prev) => ({ ...prev, [field]: val }));
+      setIsDirty(true);
+    };
+
+    // Call validation-aware field change handler
+    await handleValidatedFieldChange(fieldName, value, updateRecord);
+  }, [handleValidatedFieldChange]);
 
   /**
-   * Handle save operation
+   * Handle save operation with validation
    */
   const handleSave = async () => {
     try {
       setIsSaving(true);
       setError(null);
+
+      // 1. Client-side validation
+      const clientValidation = validateAll();
+      if (!clientValidation.valid) {
+        setError('Please fix validation errors before saving');
+        setIsSaving(false);
+        return;
+      }
+
+      // 2. Server-side pre-validation
+      const serverValidation = await preValidate();
+      if (!serverValidation.valid) {
+        // Errors are already set in validation state
+        setError('Server validation failed. Please check the errors below.');
+        setIsSaving(false);
+        return;
+      }
 
       // Prepare data for save (exclude id and internal fields)
       const dataToSave = { ...recordData };
@@ -171,6 +206,41 @@ function FormView({ modelName, recordId, viewId = null }) {
     setIsDirty(false);
   };
 
+  /**
+   * Handle button clicks
+   */
+  const handleButtonClick = useCallback(async (buttonName) => {
+    try {
+      setError(null);
+
+      const buttonHandler = createButtonHandler(
+        modelName,
+        buttonName,
+        recordId,
+        sessionId,
+        database,
+        (result) => {
+          // Handle the result
+          if (result.type === 'reload') {
+            // Reload the form
+            window.location.reload();
+          } else if (result.type === 'action') {
+            // Open new window/view (not yet implemented)
+            console.log('Action result:', result.action);
+            alert('Action executed successfully! (Opening new views not yet implemented)');
+          } else if (result.type === 'error') {
+            setError(result.error.message || 'Button action failed');
+          }
+        }
+      );
+
+      await buttonHandler();
+    } catch (err) {
+      console.error('Error executing button:', err);
+      setError(err.message || 'Button action failed');
+    }
+  }, [modelName, recordId, sessionId, database]);
+
   // Loading state
   if (isLoading) {
     return (
@@ -207,8 +277,18 @@ function FormView({ modelName, recordId, viewId = null }) {
         onSave={handleSave}
         onCancel={handleCancel}
         isDirty={isDirty}
-        isSaving={isSaving}
+        isSaving={isSaving || isValidating}
+        hasErrors={hasErrors}
       />
+
+      {/* Display form-level validation errors */}
+      {validationErrors._form && (
+        <Container className="py-2">
+          <Alert variant="danger">
+            {validationErrors._form}
+          </Alert>
+        </Container>
+      )}
 
       <Container className="py-3">
         <TrytonViewRenderer
@@ -216,7 +296,12 @@ function FormView({ modelName, recordId, viewId = null }) {
           fields={fields}
           record={recordData}
           onFieldChange={handleFieldChange}
+          onButtonClick={handleButtonClick}
           readonly={false}
+          validationErrors={validationErrors}
+          validationWarnings={validationWarnings}
+          fieldStates={fieldStates}
+          getFieldValidationProps={getFieldValidationProps}
         />
       </Container>
     </div>

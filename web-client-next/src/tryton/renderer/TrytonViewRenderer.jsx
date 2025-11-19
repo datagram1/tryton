@@ -10,7 +10,7 @@ import { getWidget } from '../registry';
 /**
  * Render a group node (layout container)
  */
-function renderGroup(node, fields, record, onFieldChange, readonly, depth = 0) {
+function renderGroup(node, fields, record, onFieldChange, onButtonClick, readonly, validationProps, depth = 0) {
   const col = getNodeAttr(node, 'col', 4);
   const colspan = getNodeAttr(node, 'colspan', 1);
   const string = getNodeAttr(node, 'string', '');
@@ -30,7 +30,12 @@ function renderGroup(node, fields, record, onFieldChange, readonly, depth = 0) {
                 fields={fields}
                 record={record}
                 onFieldChange={onFieldChange}
+                onButtonClick={onButtonClick}
                 readonly={readonly}
+                validationErrors={validationProps?.validationErrors}
+                validationWarnings={validationProps?.validationWarnings}
+                fieldStates={validationProps?.fieldStates}
+                getFieldValidationProps={validationProps?.getFieldValidationProps}
                 depth={depth + 1}
               />
             </Col>
@@ -44,7 +49,7 @@ function renderGroup(node, fields, record, onFieldChange, readonly, depth = 0) {
 /**
  * Render a notebook node (tabs container)
  */
-function renderNotebook(node, fields, record, onFieldChange, readonly, depth = 0) {
+function renderNotebook(node, fields, record, onFieldChange, onButtonClick, readonly, validationProps, depth = 0) {
   const pages = node.children.filter((child) => child.tag === 'page');
 
   if (pages.length === 0) {
@@ -71,7 +76,12 @@ function renderNotebook(node, fields, record, onFieldChange, readonly, depth = 0
               fields={fields}
               record={record}
               onFieldChange={onFieldChange}
+              onButtonClick={onButtonClick}
               readonly={readonly}
+              validationErrors={validationProps?.validationErrors}
+              validationWarnings={validationProps?.validationWarnings}
+              fieldStates={validationProps?.fieldStates}
+              getFieldValidationProps={validationProps?.getFieldValidationProps}
               depth={depth + 1}
             />
           </Tab.Pane>
@@ -84,7 +94,7 @@ function renderNotebook(node, fields, record, onFieldChange, readonly, depth = 0
 /**
  * Render a page node (tab page content)
  */
-function renderPage(node, fields, record, onFieldChange, readonly, depth = 0) {
+function renderPage(node, fields, record, onFieldChange, onButtonClick, readonly, validationProps, depth = 0) {
   return (
     <div key={`page-${depth}`}>
       {node.children && node.children.map((child, idx) => (
@@ -94,7 +104,12 @@ function renderPage(node, fields, record, onFieldChange, readonly, depth = 0) {
           fields={fields}
           record={record}
           onFieldChange={onFieldChange}
+          onButtonClick={onButtonClick}
           readonly={readonly}
+          validationErrors={validationProps?.validationErrors}
+          validationWarnings={validationProps?.validationWarnings}
+          fieldStates={validationProps?.fieldStates}
+          getFieldValidationProps={validationProps?.getFieldValidationProps}
           depth={depth + 1}
         />
       ))}
@@ -144,7 +159,7 @@ function renderLabel(node, fields, depth = 0) {
 /**
  * Render a field node using the widget registry
  */
-function renderField(node, fields, record, onFieldChange, readonly = false, depth = 0) {
+function renderField(node, fields, record, onFieldChange, readonly = false, validationProps, depth = 0) {
   const name = getNodeAttr(node, 'name', '');
   const widgetOverride = getNodeAttr(node, 'widget', null);
   const fieldReadonly = readonly || getNodeAttr(node, 'readonly', false);
@@ -162,24 +177,39 @@ function renderField(node, fields, record, onFieldChange, readonly = false, dept
   const field = fields[name];
   const value = record ? record[name] : null;
 
+  // Get validation props for this field
+  const fieldValidation = validationProps?.getFieldValidationProps?.(name) || {};
+  const error = validationProps?.validationErrors?.[name];
+  const warning = validationProps?.validationWarnings?.[name];
+  const fieldState = validationProps?.fieldStates?.[name] || {};
+
   // Get the appropriate widget for this field type
   const widgetType = widgetOverride || field.type;
   const WidgetComponent = getWidget(widgetType);
 
-  // Merge field metadata with any overrides from the node
+  // Merge field metadata with any overrides from the node and validation state
   const fieldWithOverrides = {
     ...field,
-    required: required || field.required,
+    required: fieldValidation.required || required || field.required,
+    readonly: fieldValidation.readonly || fieldReadonly,
+    invisible: fieldValidation.invisible,
     string: string || field.string || name,
   };
 
   const isRequired = fieldWithOverrides.required;
+  const isReadonly = fieldWithOverrides.readonly;
+  const isInvisible = fieldWithOverrides.invisible;
   const labelText = fieldWithOverrides.string;
+
+  // Don't render invisible fields
+  if (isInvisible) {
+    return null;
+  }
 
   return (
     <div key={`field-${depth}-${name}`} className="mb-3">
       {labelText && (
-        <label className="form-label fw-semibold">
+        <label className={`form-label fw-semibold ${isRequired ? 'required' : ''}`}>
           {labelText}
           {isRequired && <span className="text-danger ms-1">*</span>}
         </label>
@@ -188,10 +218,23 @@ function renderField(node, fields, record, onFieldChange, readonly = false, dept
         name={name}
         value={value}
         onChange={onFieldChange}
-        readonly={fieldReadonly}
+        readonly={isReadonly}
         field={fieldWithOverrides}
         attributes={node.attributes || {}}
+        isInvalid={fieldValidation.isInvalid}
+        isValid={fieldValidation.isValid}
+        className={fieldValidation.className}
       />
+      {error && (
+        <div className="invalid-feedback d-block">
+          {error}
+        </div>
+      )}
+      {warning && (
+        <div className="alert alert-warning mt-2 py-1 px-2 small">
+          {warning}
+        </div>
+      )}
     </div>
   );
 }
@@ -199,16 +242,34 @@ function renderField(node, fields, record, onFieldChange, readonly = false, dept
 /**
  * Render a button node
  */
-function renderButton(node, depth = 0) {
+function renderButton(node, onButtonClick = null, depth = 0) {
   const name = getNodeAttr(node, 'name', '');
   const string = getNodeAttr(node, 'string', 'Button');
   const icon = getNodeAttr(node, 'icon', '');
+  const confirm = getNodeAttr(node, 'confirm', '');
+
+  const handleClick = () => {
+    // If there's a confirm message, show confirmation dialog
+    if (confirm) {
+      if (!window.confirm(confirm)) {
+        return;
+      }
+    }
+
+    // Call the button click handler if provided
+    if (onButtonClick) {
+      onButtonClick(name);
+    } else {
+      console.warn('Button clicked but no handler provided:', name);
+    }
+  };
 
   return (
     <button
       key={`button-${depth}`}
       className="btn btn-primary btn-sm"
-      onClick={() => console.log('Button clicked:', name)}
+      onClick={handleClick}
+      type="button"
     >
       {string}
     </button>
@@ -218,10 +279,30 @@ function renderButton(node, depth = 0) {
 /**
  * Main Recursive Renderer Component
  */
-function TrytonViewRenderer({ node, fields = {}, record = null, onFieldChange = null, readonly = false, depth = 0 }) {
+function TrytonViewRenderer({
+  node,
+  fields = {},
+  record = null,
+  onFieldChange = null,
+  onButtonClick = null,
+  readonly = false,
+  validationErrors = {},
+  validationWarnings = {},
+  fieldStates = {},
+  getFieldValidationProps = null,
+  depth = 0
+}) {
   if (!node) {
     return null;
   }
+
+  // Package validation props for passing to child renderers
+  const validationProps = {
+    validationErrors,
+    validationWarnings,
+    fieldStates,
+    getFieldValidationProps,
+  };
 
   // Render based on node type
   switch (node.tag) {
@@ -237,7 +318,12 @@ function TrytonViewRenderer({ node, fields = {}, record = null, onFieldChange = 
               fields={fields}
               record={record}
               onFieldChange={onFieldChange}
+              onButtonClick={onButtonClick}
               readonly={readonly}
+              validationErrors={validationErrors}
+              validationWarnings={validationWarnings}
+              fieldStates={fieldStates}
+              getFieldValidationProps={getFieldValidationProps}
               depth={depth + 1}
             />
           ))}
@@ -245,13 +331,13 @@ function TrytonViewRenderer({ node, fields = {}, record = null, onFieldChange = 
       );
 
     case 'group':
-      return renderGroup(node, fields, record, onFieldChange, readonly, depth);
+      return renderGroup(node, fields, record, onFieldChange, onButtonClick, readonly, validationProps, depth);
 
     case 'notebook':
-      return renderNotebook(node, fields, record, onFieldChange, readonly, depth);
+      return renderNotebook(node, fields, record, onFieldChange, onButtonClick, readonly, validationProps, depth);
 
     case 'page':
-      return renderPage(node, fields, record, onFieldChange, readonly, depth);
+      return renderPage(node, fields, record, onFieldChange, onButtonClick, readonly, validationProps, depth);
 
     case 'separator':
       return renderSeparator(node, depth);
@@ -260,10 +346,10 @@ function TrytonViewRenderer({ node, fields = {}, record = null, onFieldChange = 
       return renderLabel(node, fields, depth);
 
     case 'field':
-      return renderField(node, fields, record, onFieldChange, readonly, depth);
+      return renderField(node, fields, record, onFieldChange, readonly, validationProps, depth);
 
     case 'button':
-      return renderButton(node, depth);
+      return renderButton(node, onButtonClick, depth);
 
     default:
       // Unknown node type

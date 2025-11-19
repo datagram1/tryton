@@ -5,7 +5,7 @@ import { FaSave, FaTimes, FaPlus, FaTrash, FaUndo, FaRedo } from 'react-icons/fa
  * FormToolbar Component
  * Toolbar for form actions (Save, Cancel, etc.)
  */
-function FormToolbar({ onSave, onCancel, isDirty, isSaving, onNew, onDelete }) {
+function FormToolbar({ onSave, onCancel, isDirty, isSaving, hasErrors = false, onNew, onDelete }) {
   return (
     <Navbar bg="light" className="border-bottom py-2">
       <Container fluid>
@@ -13,8 +13,8 @@ function FormToolbar({ onSave, onCancel, isDirty, isSaving, onNew, onDelete }) {
           <Button
             variant={isDirty ? 'primary' : 'outline-primary'}
             onClick={onSave}
-            disabled={!isDirty || isSaving}
-            title="Save (Ctrl+S)"
+            disabled={!isDirty || isSaving || hasErrors}
+            title={hasErrors ? 'Fix validation errors before saving' : 'Save (Ctrl+S)'}
           >
             <FaSave className="me-1" />
             {isSaving ? 'Saving...' : 'Save'}
