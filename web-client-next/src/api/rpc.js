@@ -359,6 +359,19 @@ export const rpc = {
    */
   importData: (modelName, fields, data, sessionId, database) =>
     call(`model.${modelName}.import_data`, [fields, data], sessionId, database),
+
+  /**
+   * Search for records by name (autocomplete)
+   * @param {string} modelName - Model name
+   * @param {string} searchText - Text to search for
+   * @param {Array} domain - Optional search domain filter
+   * @param {string} sessionId - Session ID
+   * @param {string} database - Database name
+   * @param {Object} context - Optional context
+   * @returns {Promise<Array>} - Array of [id, name] tuples
+   */
+  nameSearch: (modelName, searchText, domain = [], sessionId, database, context = {}) =>
+    call(`model.${modelName}.name_search`, [searchText, domain, context], sessionId, database),
 };
 
 export default rpc;
