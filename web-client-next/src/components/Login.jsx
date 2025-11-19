@@ -7,7 +7,7 @@ import useSessionStore from '../store/session';
  * Provides authentication interface for Tryton
  */
 function Login({ onLoginSuccess }) {
-  const [database, setDatabase] = useState('');
+  const [database, setDatabase] = useState('tryton');
   const [username, setUsername] = useState(
     import.meta.env.VITE_DEV_DEFAULT_LOGIN || ''
   );

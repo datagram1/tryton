@@ -101,17 +101,17 @@ Stack: React, Vite, React-Bootstrap (Bootstrap 5), Zustand (State), fast-xml-par
 
 *Goal: Map Tryton data types to Bootstrap 5 components.*
 
-* \[ \] **Registry Infrastructure**  
-  * Create src/tryton/registry/index.js.  
-  * Export a dictionary mapping Tryton types (char, integer, date) to React Components.  
-* \[ \] **Basic Field Widgets**  
-  * **Char/String:** Form.Control type="text".  
-  * **Integer/Float:** Form.Control type="number".  
-  * **Boolean:** Form.Check type="checkbox".  
-  * **Date/DateTime:** Native \<input type="date"\>. *Note: Requires value marshalling (converting JS Date to Tryton 'YYYY-MM-DD' string).*  
-  * **Selection:** Form.Select. Populate \<option\> from the field's selection attribute in metadata.  
-* \[ \] **Layout Widgets**  
-  * **Label:** Handle \<label name="xyz"/\> tags.  
+* \[x\] **Registry Infrastructure**
+  * Create src/tryton/registry/index.js.
+  * Export a dictionary mapping Tryton types (char, integer, date) to React Components.
+* \[x\] **Basic Field Widgets**
+  * **Char/String:** Form.Control type="text".
+  * **Integer/Float:** Form.Control type="number".
+  * **Boolean:** Form.Check type="checkbox".
+  * **Date/DateTime:** Native \<input type="date"\>. *Note: Requires value marshalling (converting JS Date to Tryton 'YYYY-MM-DD' string).*
+  * **Selection:** Form.Select. Populate \<option\> from the field's selection attribute in metadata.
+* \[x\] **Layout Widgets**
+  * **Label:** Handle \<label name="xyz"/\> tags.
   * **Readonly Mode:** Ensure all widgets accept a readonly prop that renders text instead of inputs.
 
 ## **Phase 6: Data Binding & Interaction**
