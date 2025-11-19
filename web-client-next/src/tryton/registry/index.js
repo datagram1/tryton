@@ -19,6 +19,10 @@ import One2ManyWidget from './widgets/One2ManyWidget';
 import Many2ManyWidget from './widgets/Many2ManyWidget';
 import PasswordWidget from './widgets/PasswordWidget';
 import TimeWidget from './widgets/TimeWidget';
+import URLWidget from './widgets/URLWidget';
+import EmailWidget from './widgets/EmailWidget';
+import ColorWidget from './widgets/ColorWidget';
+import CallToWidget from './widgets/CallToWidget';
 
 // Widget registry mapping Tryton types to React components
 const widgetRegistry = {
@@ -47,6 +51,14 @@ const widgetRegistry = {
   many2one: Many2OneWidget,
   one2many: One2ManyWidget,
   many2many: Many2ManyWidget,
+
+  // Link/Contact widgets
+  url: URLWidget,
+  email: EmailWidget,
+  callto: CallToWidget,
+
+  // Visual widgets
+  color: ColorWidget,
 
   // Layout widgets
   label: LabelWidget,

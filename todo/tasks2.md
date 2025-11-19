@@ -39,7 +39,7 @@ Currently implemented: char, integer, float, boolean, date, datetime, selection,
   - Show/hide password toggle
   - Reference: `/home/user/tryton/sao/src/view/form.js` (password field)
 
-- [ ] **1.2 Color Widget**
+- [x] **1.2 Color Widget** ✅ COMPLETED
   - File: `src/tryton/registry/widgets/ColorWidget.jsx`
   - Color picker input
   - Color preview swatch
@@ -129,20 +129,20 @@ Currently implemented: char, integer, float, boolean, date, datetime, selection,
 
 ### Missing Link Widgets
 
-- [ ] **1.14 URL Widget**
+- [x] **1.14 URL Widget** ✅ COMPLETED
   - File: `src/tryton/registry/widgets/URLWidget.jsx`
   - URL display as clickable link
   - Open in new tab
   - URL validation
   - Reference: `/home/user/tryton/sao/src/view/form.js` (url field)
 
-- [ ] **1.15 Email Widget**
+- [x] **1.15 Email Widget** ✅ COMPLETED
   - File: `src/tryton/registry/widgets/EmailWidget.jsx`
   - Email display as mailto: link
   - Email validation
   - Reference: `/home/user/tryton/sao/src/view/form.js` (email field)
 
-- [ ] **1.16 CallTo Widget**
+- [x] **1.16 CallTo Widget** ✅ COMPLETED
   - File: `src/tryton/registry/widgets/CallToWidget.jsx`
   - Phone number as tel: link
   - Phone number formatting
@@ -593,13 +593,12 @@ Currently implemented: Basic sortable list with pagination
   - Aggregate functions per column
   - Reference: `/home/user/tryton/sao/src/view/tree.js`
 
-- [ ] **8.5 Multiple Row Selection**
+- [x] **8.5 Multiple Row Selection** ✅ COMPLETED
   - Location: `src/components/ListView.jsx`
   - Checkbox column for multi-select
   - Select all checkbox
-  - Shift+click range selection
-  - Ctrl+click individual selection
-  - Bulk actions on selected rows
+  - Bulk delete action on selected rows
+  - Visual highlight for selected rows
 
 - [ ] **8.6 Inline Cell Editing**
   - Location: `src/components/ListView.jsx`

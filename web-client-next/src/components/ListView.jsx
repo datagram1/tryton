@@ -33,6 +33,8 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const searchDebounceTimer = useRef(null);
+  const [selectedRows, setSelectedRows] = useState(new Set());
+  const [rowSelection, setRowSelection] = useState({});
 
   /**
    * Debounce search query
@@ -316,6 +318,61 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
   };
 
   /**
+   * Handle row selection changes
+   */
+  const handleSelectRow = useCallback((recordId) => {
+    setSelectedRows(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(recordId)) {
+        newSet.delete(recordId);
+      } else {
+        newSet.add(recordId);
+      }
+      return newSet;
+    });
+  }, []);
+
+  /**
+   * Handle select all rows
+   */
+  const handleSelectAll = useCallback(() => {
+    if (selectedRows.size === records.length) {
+      // Deselect all
+      setSelectedRows(new Set());
+    } else {
+      // Select all visible records
+      setSelectedRows(new Set(records.map(r => r.id)));
+    }
+  }, [records, selectedRows]);
+
+  /**
+   * Handle delete selected rows
+   */
+  const handleDeleteSelected = useCallback(async () => {
+    if (selectedRows.size === 0) return;
+
+    const confirmed = window.confirm(
+      `Are you sure you want to delete ${selectedRows.size} record(s)? This action cannot be undone.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setIsLoading(true);
+      await rpc.delete(modelName, Array.from(selectedRows), sessionId, database);
+
+      // Clear selection and reload
+      setSelectedRows(new Set());
+      setOffset(0);
+      window.location.reload();
+    } catch (err) {
+      console.error('Error deleting records:', err);
+      setError(err.message || 'Failed to delete records');
+      setIsLoading(false);
+    }
+  }, [selectedRows, modelName, sessionId, database]);
+
+  /**
    * Initialize table
    */
   const table = useReactTable({
@@ -323,8 +380,11 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
     columns,
     state: {
       sorting,
+      rowSelection,
     },
     onSortingChange: setSorting,
+    onRowSelectionChange: setRowSelection,
+    enableRowSelection: true,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
   });
@@ -380,6 +440,15 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
             <Button variant="outline-secondary" onClick={handleRefresh}>
               <FaSync className="me-1" /> Refresh
             </Button>
+            {selectedRows.size > 0 && (
+              <Button
+                variant="outline-danger"
+                onClick={handleDeleteSelected}
+                title={`Delete ${selectedRows.size} selected record(s)`}
+              >
+                <FaTrash className="me-1" /> Delete Selected ({selectedRows.size})
+              </Button>
+            )}
           </ButtonGroup>
 
           {/* Search Box */}
@@ -418,6 +487,15 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
           <thead className="sticky-top bg-light">
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
+                {/* Checkbox column header */}
+                <th style={{ width: '40px' }}>
+                  <Form.Check
+                    type="checkbox"
+                    checked={selectedRows.size === records.length && records.length > 0}
+                    onChange={handleSelectAll}
+                    title="Select all"
+                  />
+                </th>
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
@@ -441,11 +519,24 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
             {table.getRowModel().rows.map((row) => (
               <tr
                 key={row.id}
-                onClick={() => handleRowClick(row.original)}
-                style={{ cursor: 'pointer' }}
+                className={selectedRows.has(row.original.id) ? 'table-active' : ''}
               >
+                {/* Checkbox column */}
+                <td onClick={(e) => e.stopPropagation()}>
+                  <Form.Check
+                    type="checkbox"
+                    checked={selectedRows.has(row.original.id)}
+                    onChange={() => handleSelectRow(row.original.id)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </td>
+                {/* Data columns */}
                 {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id}>
+                  <td
+                    key={cell.id}
+                    onClick={() => handleRowClick(row.original)}
+                    style={{ cursor: 'pointer' }}
+                  >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </td>
                 ))}
