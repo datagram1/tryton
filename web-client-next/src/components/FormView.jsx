@@ -5,6 +5,7 @@ import FormToolbar from './FormToolbar';
 import { parseAndNormalizeView } from '../tryton/parsers/xml';
 import rpc from '../api/rpc';
 import useSessionStore from '../store/session';
+import useTabsStore from '../store/tabs';
 import { createButtonHandler } from '../tryton/actions/buttonHandler';
 import { useFormValidation } from '../hooks/useFormValidation';
 
@@ -14,6 +15,7 @@ import { useFormValidation } from '../hooks/useFormValidation';
  */
 function FormView({ modelName, recordId, viewId = null }) {
   const { sessionId, database } = useSessionStore();
+  const { openTab } = useTabsStore();
 
   // State
   const [viewDefinition, setViewDefinition] = useState(null);
@@ -207,6 +209,22 @@ function FormView({ modelName, recordId, viewId = null }) {
   };
 
   /**
+   * Handle new record button click
+   */
+  const handleNew = useCallback(() => {
+    // Open form view in new tab for creating a new record
+    openTab({
+      id: `form-${modelName}-new-${Date.now()}`,
+      title: `${modelName} - New`,
+      type: 'form',
+      props: {
+        modelName,
+        recordId: null, // null indicates a new record
+      },
+    });
+  }, [modelName, openTab]);
+
+  /**
    * Handle button clicks
    */
   const handleButtonClick = useCallback(async (buttonName) => {
@@ -276,6 +294,7 @@ function FormView({ modelName, recordId, viewId = null }) {
       <FormToolbar
         onSave={handleSave}
         onCancel={handleCancel}
+        onNew={handleNew}
         isDirty={isDirty}
         isSaving={isSaving || isValidating}
         hasErrors={hasErrors}
