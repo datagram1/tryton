@@ -8,6 +8,7 @@ import useSessionStore from '../store/session';
 import useMenuStore from '../store/menu';
 import useTabsStore from '../store/tabs';
 import { executeAction } from '../tryton/actions/actionExecutor';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 
 /**
  * MainLayout Component
@@ -19,7 +20,7 @@ function MainLayout() {
   const [showWizard, setShowWizard] = useState(false);
   const { username, logout, sessionId, database } = useSessionStore();
   const { menuTree, isLoading, loadMenu, error } = useMenuStore();
-  const { openTab } = useTabsStore();
+  const { openTab, closeTab, tabs, activeTabId, setActiveTab } = useTabsStore();
 
   // Load menu on mount
   useEffect(() => {
