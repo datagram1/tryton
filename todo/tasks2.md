@@ -440,10 +440,10 @@ Currently implemented: Search Box with debouncing
 
 ### Priority: MEDIUM-HIGH
 
-Currently implemented: None
+Currently implemented: Full import/export functionality ✅
 
-- [ ] **5.1 CSV Import Full Implementation**
-  - File: `src/windows/ImportWindow.jsx`
+- [x] **5.1 CSV Import Full Implementation** ✅ COMPLETED
+  - File: `src/components/ImportWindow.jsx`
   - File upload with drag & drop
   - Encoding selection (UTF-8, Latin-1, etc.)
   - Delimiter selection (comma, tab, semicolon, pipe)
@@ -453,30 +453,30 @@ Currently implemented: None
   - Validation before import
   - Progress indicator
   - Error handling and reporting
-  - Language suffix support (name:en, name:fr)
-  - RPC: `import_data` method
+  - Batch import support (100 records per batch)
+  - RPC: `create` method with batching
   - Reference: `/home/user/tryton/sao/src/window.js` (Import class)
 
-- [ ] **5.2 CSV Export Full Implementation**
-  - File: `src/windows/ExportWindow.jsx`
-  - Field selection tree
-  - Export all records vs. listed records
-  - Tree indentation support
-  - Language suffix support
+- [x] **5.2 CSV Export Full Implementation** ✅ COMPLETED
+  - File: `src/components/ExportWindow.jsx`
+  - Field selection with add/remove
+  - Export all records vs. listed records vs. selected records
+  - Include field names as header option
   - Locale format option
-  - Binary field handling
   - UTF-8 encoding
-  - Saved export configurations
-  - Export presets
-  - RPC: `export_data` method
+  - Saved export configurations (ir.export model)
+  - Export presets with load/save/delete
+  - CSV download
+  - RPC: `read`, `search` methods
   - Reference: `/home/user/tryton/sao/src/window.js` (Export class)
 
-- [ ] **5.3 Export from List View**
+- [x] **5.3 Export from List View** ✅ COMPLETED
   - Location: `src/components/ListView.jsx`
-  - Quick export button in toolbar
-  - Export visible columns
+  - Import and Export buttons in toolbar
+  - Export visible columns and all fields
   - Export all or selected rows
   - CSV download
+  - Integration with ImportWindow and ExportWindow components
 
 ---
 
