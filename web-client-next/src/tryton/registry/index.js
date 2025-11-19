@@ -15,6 +15,7 @@ import DateTimeWidget from './widgets/DateTimeWidget';
 import SelectionWidget from './widgets/SelectionWidget';
 import LabelWidget from './widgets/LabelWidget';
 import Many2OneWidget from './widgets/Many2OneWidget';
+import One2OneWidget from './widgets/One2OneWidget';
 import One2ManyWidget from './widgets/One2ManyWidget';
 import Many2ManyWidget from './widgets/Many2ManyWidget';
 import PasswordWidget from './widgets/PasswordWidget';
@@ -59,6 +60,7 @@ const widgetRegistry = {
 
   // Relational fields
   many2one: Many2OneWidget,
+  one2one: One2OneWidget, // One-to-one relationship
   one2many: One2ManyWidget,
   many2many: Many2ManyWidget,
   reference: ReferenceWidget, // Dynamic model reference
