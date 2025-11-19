@@ -95,7 +95,7 @@ Currently implemented: char, integer, float, boolean, date, datetime, selection,
   - Format: "model.name,123"
   - Reference: `/home/user/tryton/sao/src/view/form.js` (reference field)
 
-- [ ] **1.10 One2One Widget**
+- [x] **1.10 One2One Widget** ✅ COMPLETED
   - File: `src/tryton/registry/widgets/One2OneWidget.jsx`
   - Similar to Many2One but for one-to-one relationships
   - Single record selection
