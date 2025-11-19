@@ -387,13 +387,15 @@ Currently implemented: Search Box with debouncing
   - Keyboard shortcut: Ctrl+F
   - Searches across all char and text fields
 
-- [ ] **4.2 Domain Parser**
+- [x] **4.2 Domain Parser** ✅ COMPLETED
   - File: `src/tryton/search/DomainParser.js`
-  - Parse search expressions: `name = "John"`
+  - Parse search expressions: `name: John`, `age: > 30`
   - Operators: =, !=, <, >, <=, >=, in, not in, like, ilike
   - Boolean operators: & (AND), | (OR)
-  - Date ranges: "date between 2024-01-01 and 2024-12-31"
-  - Field auto-completion
+  - Date/numeric ranges: `age: 20..40`
+  - Field auto-completion support
+  - Lexer for tokenizing search expressions
+  - Domain to string conversion
   - Reference: `/home/user/tryton/sao/src/common.js` (domain parser)
 
 - [ ] **4.3 Advanced Filter Builder**
