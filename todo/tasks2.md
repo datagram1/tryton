@@ -673,18 +673,25 @@ Currently implemented: Full CRUD operations in both widgets ✅
   - Add to relationship
   - Reference: `/home/user/tryton/sao/src/view/form.js` (Many2Many class)
 
-- [ ] **9.4 Inline Tree Editing**
+- [x] **9.4 Inline Tree Editing** ✅ COMPLETED
   - Location: Both O2M and M2M widgets
-  - Editable cells in grid
-  - Tab navigation between cells
-  - Auto-save or save button
+  - Editable cells in grid (click to edit)
+  - Tab navigation between cells (Tab/Shift+Tab)
+  - Auto-save on blur or Enter key
+  - Escape key to cancel editing
+  - Visual highlight for editing cell (yellow background)
+  - Supports text, number, and boolean field types
+  - Error handling with value reversion on failure
   - Reference: `/home/user/tryton/sao/src/view/tree.js`
 
-- [ ] **9.5 Tree View Configuration**
+- [x] **9.5 Tree View Configuration** ✅ COMPLETED
   - Location: Both O2M and M2M widgets
-  - Parse tree view definition from relation
-  - Dynamic column generation (already done, but ensure complete)
-  - Support for editable attribute
+  - Parse tree view definition from relation (fieldsViewGet)
+  - Extract field order from view XML structure
+  - Dynamic column generation from tree view children
+  - Support for editable attribute (`editable="1"` in tree XML)
+  - Column metadata includes readonly, type from field definitions
+  - Fallback to all fields if tree structure not found
   - Reference: `/home/user/tryton/sao/src/view/form.js`
 
 ---
