@@ -283,22 +283,24 @@ Currently implemented: Save, Cancel, New (in FormView only)
 
 ### Missing Advanced Actions
 
-- [ ] **3.6 Attachment Manager**
+- [x] **3.6 Attachment Manager** ✅ COMPLETED
   - File: `src/windows/AttachmentWindow.jsx`
   - Button in toolbar (Ctrl+Shift+T)
   - List all attachments on record
   - Upload/download/delete attachments
   - Drag & drop file upload
-  - Preview panel
+  - Preview panel (file type icons)
   - Attachment count badge on button
   - Reference: `/home/user/tryton/sao/src/window.js` (Attachment class)
 
-- [ ] **3.7 Note System**
+- [x] **3.7 Note System** ✅ COMPLETED
   - File: `src/windows/NoteWindow.jsx`
-  - Button in toolbar (Ctrl+Shift+O)
+  - Button in toolbar (Ctrl+Shift+N)
   - Add/edit/delete notes on record
-  - Unread/total count badge
+  - Mark notes as read/unread
+  - Unread/total count badges (secondary + danger)
   - Note timestamp and user tracking
+  - Inline note editor with save/cancel
   - Reference: `/home/user/tryton/sao/src/window.js` (Note class)
 
 - [ ] **3.8 Chat/Comments**
@@ -789,9 +791,9 @@ Currently implemented: None
 
 ### Priority: MEDIUM
 
-Currently implemented: None
+Currently implemented: All features ✅
 
-- [ ] **12.1 Preferences Window**
+- [x] **12.1 Preferences Window** ✅ COMPLETED
   - File: `src/windows/PreferencesWindow.jsx`
   - User settings modal
   - Language selection
@@ -803,17 +805,18 @@ Currently implemented: None
   - RPC: `model('res.user').write` method
   - Reference: `/home/user/tryton/sao/src/preferences.js`
 
-- [ ] **12.2 Avatar Display**
-  - Location: Navbar user dropdown
-  - User avatar image
-  - Initials fallback
+- [x] **12.2 Avatar Display** ✅ COMPLETED
+  - Location: Navbar user dropdown in `src/components/MainLayout.jsx`
+  - User avatar with initials
+  - Initials fallback (extracts from username)
+  - Circular design with primary color
   - Reference: `/home/user/tryton/sao/src/preferences.js`
 
-- [ ] **12.3 Theme Customization UI**
-  - File: `src/components/ThemeCustomizer.jsx`
-  - Color picker for theme colors
-  - Preview changes
-  - Save theme preferences
+- [x] **12.3 Theme Customization UI** ✅ COMPLETED
+  - Location: Integrated into `src/windows/PreferencesWindow.jsx` Theme tab
+  - Color picker for theme colors (primary, secondary, success, danger, warning, info)
+  - Live preview changes
+  - Save theme preferences to localStorage
   - Dark mode toggle
   - Reference: `/home/user/tryton/sao/src/common.js`
 

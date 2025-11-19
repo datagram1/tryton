@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Container, Table, Spinner, Alert, Button, ButtonGroup, Pagination, Form, InputGroup } from 'react-bootstrap';
-import { FaPlus, FaEdit, FaTrash, FaSync, FaSearch, FaTimes } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaTrash, FaSync, FaSearch, FaTimes, FaFileExport, FaFileImport } from 'react-icons/fa';
 import {
   useReactTable,
   getCoreRowModel,
@@ -12,6 +12,8 @@ import rpc from '../api/rpc';
 import useSessionStore from '../store/session';
 import useTabsStore from '../store/tabs';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import ExportWindow from './ExportWindow';
+import ImportWindow from './ImportWindow';
 
 /**
  * ListView Component
@@ -37,6 +39,10 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
   const searchInputRef = useRef(null);
   const [selectedRows, setSelectedRows] = useState(new Set());
   const [rowSelection, setRowSelection] = useState({});
+
+  // Import/Export state
+  const [showExport, setShowExport] = useState(false);
+  const [showImport, setShowImport] = useState(false);
 
   /**
    * Debounce search query
@@ -416,6 +422,28 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
   };
 
   /**
+   * Handle export button click
+   */
+  const handleExportClick = () => {
+    setShowExport(true);
+  };
+
+  /**
+   * Handle import button click
+   */
+  const handleImportClick = () => {
+    setShowImport(true);
+  };
+
+  /**
+   * Handle import complete
+   */
+  const handleImportComplete = () => {
+    // Reload the list view
+    handleRefresh();
+  };
+
+  /**
    * Handle pagination
    */
   const currentPage = Math.floor(offset / limit) + 1;
@@ -467,6 +495,15 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
                 <FaTrash className="me-1" /> Delete Selected ({selectedRows.size})
               </Button>
             )}
+          </ButtonGroup>
+
+          <ButtonGroup size="sm" className="ms-2">
+            <Button variant="outline-success" onClick={handleImportClick}>
+              <FaFileImport className="me-1" /> Import
+            </Button>
+            <Button variant="outline-info" onClick={handleExportClick}>
+              <FaFileExport className="me-1" /> Export
+            </Button>
           </ButtonGroup>
 
           {/* Search Box */}
@@ -608,6 +645,27 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
           </Pagination>
         </div>
       )}
+
+      {/* Export Window */}
+      <ExportWindow
+        show={showExport}
+        onHide={() => setShowExport(false)}
+        modelName={modelName}
+        fields={fields}
+        recordIds={records.map(r => r.id)}
+        selectedIds={Array.from(selectedRows)}
+        domain={domain}
+        totalCount={total}
+      />
+
+      {/* Import Window */}
+      <ImportWindow
+        show={showImport}
+        onHide={() => setShowImport(false)}
+        onImportComplete={handleImportComplete}
+        modelName={modelName}
+        fields={fields}
+      />
     </div>
   );
 }

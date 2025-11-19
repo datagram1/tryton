@@ -7,7 +7,7 @@ import useSessionStore from '../store/session';
  * Provides authentication interface for Tryton
  */
 function Login({ onLoginSuccess }) {
-  const [database, setDatabase] = useState('tryton');
+  const [database, setDatabase] = useState('demo');
   const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('');
 
@@ -22,7 +22,7 @@ function Login({ onLoginSuccess }) {
     e.preventDefault();
 
     // Use hardcoded database for development if not provided
-    const dbName = database || 'tryton';
+    const dbName = database || 'demo';
 
     const success = await login(dbName, username, password);
 
