@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Container, Spinner, Alert, ButtonGroup, Button } from 'react-bootstrap';
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay, parseISO, isValid } from 'date-fns';
+import { enUS } from 'date-fns/locale';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { parseAndNormalizeView } from '../tryton/parsers/xml';
 import rpc from '../api/rpc';
@@ -10,7 +11,7 @@ import useTabsStore from '../store/tabs';
 
 // Setup the localizer for react-big-calendar using date-fns
 const locales = {
-  'en-US': require('date-fns/locale/en-US'),
+  'en-US': enUS,
 };
 
 const localizer = dateFnsLocalizer({

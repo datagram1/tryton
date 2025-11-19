@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Button, Alert } from 'react-bootstrap';
-import { useSelector } from 'react-redux';
+import useSessionStore from '../store/session';
 import WizardManager from '../tryton/wizard/WizardManager';
 import TrytonViewRenderer from '../tryton/renderer/TrytonViewRenderer';
 
@@ -19,8 +19,7 @@ const WizardWindow = ({
   onClose,
   onComplete
 }) => {
-  const sessionId = useSelector((state) => state.session.sessionId);
-  const database = useSelector((state) => state.session.database);
+  const { sessionId, database } = useSessionStore();
 
   const [wizard, setWizard] = useState(null);
   const [wizardState, setWizardState] = useState(null);
