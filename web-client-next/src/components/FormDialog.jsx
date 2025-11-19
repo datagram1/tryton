@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Modal, Button, Alert } from 'react-bootstrap';
 import { FaSave } from 'react-icons/fa';
 import rpc from '../api/rpc';
@@ -40,18 +40,9 @@ const FormDialog = ({
   const [isDirty, setIsDirty] = useState(false);
 
   /**
-   * Load form view and record data
-   */
-  useEffect(() => {
-    if (show && modelName) {
-      loadFormData();
-    }
-  }, [show, modelName, recordId]);
-
-  /**
    * Load form view definition and record data
    */
-  const loadFormData = async () => {
+  const loadFormData = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -101,7 +92,16 @@ const FormDialog = ({
       setError(err.message || 'Failed to load form');
       setIsLoading(false);
     }
-  };
+  }, [modelName, recordId, sessionId, database, defaults, context]);
+
+  /**
+   * Load form view and record data when dialog opens
+   */
+  useEffect(() => {
+    if (show && modelName) {
+      loadFormData();
+    }
+  }, [show, modelName, recordId, loadFormData]);
 
   /**
    * Handle field value change

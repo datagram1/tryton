@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Modal, Button, Form, Table, Alert } from 'react-bootstrap';
 import { FaSearch, FaPlus } from 'react-icons/fa';
 import rpc from '../api/rpc';
@@ -45,54 +45,9 @@ const SearchDialog = ({
   const [fields, setFields] = useState([]);
 
   /**
-   * Load field definitions and perform initial search
-   */
-  useEffect(() => {
-    if (show && modelName) {
-      loadFieldsAndSearch();
-    }
-  }, [show, modelName, domain]);
-
-  /**
-   * Load field definitions from view
-   */
-  const loadFieldsAndSearch = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      // Get tree view definition to determine which fields to display
-      const viewDef = await rpc.fieldsViewGet(
-        modelName,
-        null,
-        'tree',
-        sessionId,
-        database
-      );
-
-      // Extract field names from view (limit to first 5 for display)
-      const fieldNames = Object.keys(viewDef.fields).slice(0, 5);
-      setFields(
-        fieldNames.map(name => ({
-          name,
-          label: viewDef.fields[name]?.string || name,
-          type: viewDef.fields[name]?.type,
-        }))
-      );
-
-      // Perform initial search
-      await performSearch(fieldNames);
-    } catch (err) {
-      console.error('Error loading fields:', err);
-      setError(err.message || 'Failed to load search dialog');
-      setIsLoading(false);
-    }
-  };
-
-  /**
    * Perform search with current filters
    */
-  const performSearch = async (fieldNames = null) => {
+  const performSearch = useCallback(async (fieldNames = null) => {
     if (!fieldNames) {
       fieldNames = fields.map(f => f.name);
     }
@@ -163,7 +118,52 @@ const SearchDialog = ({
       setError(err.message || 'Search failed');
       setIsLoading(false);
     }
-  };
+  }, [fields, domain, searchText, modelName, sessionId, database, context, order]);
+
+  /**
+   * Load field definitions from view and perform initial search
+   */
+  const loadFieldsAndSearch = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      // Get tree view definition to determine which fields to display
+      const viewDef = await rpc.fieldsViewGet(
+        modelName,
+        null,
+        'tree',
+        sessionId,
+        database
+      );
+
+      // Extract field names from view (limit to first 5 for display)
+      const fieldNames = Object.keys(viewDef.fields).slice(0, 5);
+      setFields(
+        fieldNames.map(name => ({
+          name,
+          label: viewDef.fields[name]?.string || name,
+          type: viewDef.fields[name]?.type,
+        }))
+      );
+
+      // Perform initial search
+      await performSearch(fieldNames);
+    } catch (err) {
+      console.error('Error loading fields:', err);
+      setError(err.message || 'Failed to load search dialog');
+      setIsLoading(false);
+    }
+  }, [modelName, sessionId, database, performSearch]);
+
+  /**
+   * Load fields and perform initial search when dialog opens
+   */
+  useEffect(() => {
+    if (show && modelName) {
+      loadFieldsAndSearch();
+    }
+  }, [show, modelName, domain, loadFieldsAndSearch]);
 
   /**
    * Handle search button click
