@@ -266,6 +266,99 @@ export const rpc = {
    */
   fieldsViewGet: (modelName, viewId, viewType, sessionId, database) =>
     call(`model.${modelName}.fields_view_get`, [viewId, viewType], sessionId, database),
+
+  /**
+   * Get default values for a new record
+   * @param {string} modelName - Model name (e.g., 'party.party')
+   * @param {Array<string>} fields - List of field names to get defaults for
+   * @param {string} sessionId - Session ID
+   * @param {string} database - Database name
+   * @param {Object} context - Optional context object (can include default_FIELDNAME values)
+   * @returns {Promise<Object>} - Object mapping field names to default values
+   */
+  defaultGet: (modelName, fields, sessionId, database, context = {}) =>
+    call(`model.${modelName}.default_get`, [fields, context], sessionId, database),
+
+  /**
+   * Copy/duplicate records
+   * @param {string} modelName - Model name
+   * @param {Array<number>} ids - Record IDs to copy
+   * @param {string} sessionId - Session ID
+   * @param {string} database - Database name
+   * @param {Object} context - Optional context
+   * @returns {Promise<Array<number>>} - IDs of new copied records
+   */
+  copy: (modelName, ids, sessionId, database, context = {}) =>
+    call(`model.${modelName}.copy`, [ids, context], sessionId, database),
+
+  /**
+   * Execute on_change callback for field dependencies
+   * @param {string} modelName - Model name
+   * @param {Object} values - Current record values
+   * @param {Array<string>} fieldNames - Fields that changed
+   * @param {string} sessionId - Session ID
+   * @param {string} database - Database name
+   * @returns {Promise<Object>} - Updated field values
+   */
+  onChange: (modelName, values, fieldNames, sessionId, database) =>
+    call(`model.${modelName}.on_change`, [values, fieldNames], sessionId, database),
+
+  /**
+   * Server-side validation before save
+   * @param {string} modelName - Model name
+   * @param {Array<Object>} values - Record values to validate
+   * @param {string} sessionId - Session ID
+   * @param {string} database - Database name
+   * @returns {Promise<void>} - Throws error if validation fails
+   */
+  preValidate: (modelName, values, sessionId, database) =>
+    call(`model.${modelName}.pre_validate`, [values], sessionId, database),
+
+  /**
+   * Get field definitions for a model
+   * @param {string} modelName - Model name
+   * @param {Array<string>} fieldNames - Optional list of field names (null = all fields)
+   * @param {string} sessionId - Session ID
+   * @param {string} database - Database name
+   * @returns {Promise<Object>} - Field definitions
+   */
+  fieldsGet: (modelName, fieldNames, sessionId, database) =>
+    call(`model.${modelName}.fields_get`, [fieldNames], sessionId, database),
+
+  /**
+   * Count records matching a domain
+   * @param {string} modelName - Model name
+   * @param {Array} domain - Search domain
+   * @param {string} sessionId - Session ID
+   * @param {string} database - Database name
+   * @returns {Promise<number>} - Count of matching records
+   */
+  searchCount: (modelName, domain, sessionId, database) =>
+    call(`model.${modelName}.search_count`, [domain], sessionId, database),
+
+  /**
+   * Export record data
+   * @param {string} modelName - Model name
+   * @param {Array<number>} ids - Record IDs to export
+   * @param {Array<string>} fields - Fields to export
+   * @param {string} sessionId - Session ID
+   * @param {string} database - Database name
+   * @returns {Promise<Array>} - Exported data
+   */
+  exportData: (modelName, ids, fields, sessionId, database) =>
+    call(`model.${modelName}.export_data`, [ids, fields], sessionId, database),
+
+  /**
+   * Import record data
+   * @param {string} modelName - Model name
+   * @param {Array<string>} fields - Field names
+   * @param {Array<Array>} data - Data rows to import
+   * @param {string} sessionId - Session ID
+   * @param {string} database - Database name
+   * @returns {Promise<number>} - Number of records imported
+   */
+  importData: (modelName, fields, data, sessionId, database) =>
+    call(`model.${modelName}.import_data`, [fields, data], sessionId, database),
 };
 
 export default rpc;

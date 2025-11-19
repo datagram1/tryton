@@ -228,6 +228,22 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
   };
 
   /**
+   * Handle new record button click
+   */
+  const handleNew = () => {
+    // Open form view in new tab for creating a new record
+    openTab({
+      id: `form-${modelName}-new-${Date.now()}`,
+      title: `${modelName} - New`,
+      type: 'form',
+      props: {
+        modelName,
+        recordId: null, // null indicates a new record
+      },
+    });
+  };
+
+  /**
    * Initialize table
    */
   const table = useReactTable({
@@ -285,7 +301,7 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
       {/* Toolbar */}
       <div className="border-bottom p-2 bg-light">
         <ButtonGroup size="sm">
-          <Button variant="outline-primary" disabled>
+          <Button variant="outline-primary" onClick={handleNew}>
             <FaPlus className="me-1" /> New
           </Button>
           <Button variant="outline-secondary" onClick={handleRefresh}>
