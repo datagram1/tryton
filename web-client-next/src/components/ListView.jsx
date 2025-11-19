@@ -8,10 +8,58 @@ import {
   getSortedRowModel,
   getExpandedRowModel,
 } from '@tanstack/react-table';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { parseAndNormalizeView } from '../tryton/parsers/xml';
 import rpc from '../api/rpc';
 import useSessionStore from '../store/session';
 import useTabsStore from '../store/tabs';
+
+/**
+ * SortableRow Component - 8.7 Drag and Drop
+ * Individual draggable row for the list view
+ */
+function SortableRow({ row, children, isDragEnabled }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: row.id, disabled: !isDragEnabled });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <tr ref={setNodeRef} style={style}>
+      {isDragEnabled && (
+        <td {...attributes} {...listeners} style={{ cursor: 'grab', width: '40px', textAlign: 'center' }}>
+          <FaGripVertical style={{ color: '#999' }} />
+        </td>
+      )}
+      {children}
+    </tr>
+  );
+}
 
 /**
  * ListView Component
@@ -59,6 +107,15 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
   // Infinite scroll state
   const [hasMore, setHasMore] = useState(true);
   const infiniteScrollObserver = useRef(null);
+
+  // 8.7 Drag and Drop state
+  const [isDragEnabled, setIsDragEnabled] = useState(false);
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   /**
    * Debounce search query
@@ -153,8 +210,34 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
             accessorKey: fieldName,
             header: field?.string || fieldName,
             cell: (info) => formatCellValue(info.getValue(), field?.type),
+            field: field, // Store field definition for button rendering
           };
         });
+
+        // 8.10 Add button columns if buttons exist in view
+        if (parsedView._buttons && parsedView._buttons.length > 0) {
+          parsedView._buttons.forEach((buttonDef, index) => {
+            cols.push({
+              id: `button_${buttonDef.name}_${index}`,
+              accessorKey: `_button_${index}`,
+              header: buttonDef.string || buttonDef.name,
+              button: buttonDef, // Mark as button column
+              cell: (info) => (
+                <Button
+                  size="sm"
+                  variant="outline-primary"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleButtonClick(buttonDef, info.row.original);
+                  }}
+                  title={buttonDef.string || buttonDef.name}
+                >
+                  {buttonDef.string || buttonDef.name}
+                </Button>
+              ),
+            });
+          });
+        }
 
         // Add ID column (hidden but needed for row identification)
         if (!visibleFields.includes('id')) {
@@ -235,16 +318,30 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
   };
 
   /**
-   * Extract visible fields from tree view XML
+   * Extract visible fields and buttons from tree view XML
    */
   const extractVisibleFields = (viewNode, fieldDefs) => {
     const fields = [];
+    const buttons = [];
 
     const traverse = (node) => {
       if (node.tag === 'field') {
         const fieldName = node.attributes?.name || node.name;
         if (fieldName && !fields.includes(fieldName)) {
           fields.push(fieldName);
+        }
+      }
+      // 8.10 Extract button elements
+      if (node.tag === 'button') {
+        const buttonName = node.attributes?.name || node.name;
+        if (buttonName) {
+          buttons.push({
+            name: buttonName,
+            string: node.attributes?.string || buttonName,
+            confirm: node.attributes?.confirm,
+            icon: node.attributes?.icon,
+            attributes: node.attributes,
+          });
         }
       }
 
@@ -254,6 +351,9 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
     };
 
     traverse(viewNode);
+
+    // Store buttons for later use
+    viewNode._buttons = buttons;
 
     // If no fields found in view, use first 5 fields from definition
     if (fields.length === 0 && fieldDefs) {
@@ -641,6 +741,86 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
   }, [handleLoadMore]);
 
   /**
+   * 8.10 Handle Button Click
+   */
+  const handleButtonClick = useCallback(async (buttonDef, record) => {
+    // Show confirmation dialog if needed
+    if (buttonDef.confirm) {
+      const confirmed = window.confirm(buttonDef.confirm);
+      if (!confirmed) return;
+    }
+
+    try {
+      setIsLoading(true);
+
+      // Call the button method on the server
+      await rpc.call(
+        modelName,
+        buttonDef.name,
+        [[record.id]],
+        {},
+        sessionId,
+        database
+      );
+
+      // Refresh the view after button execution
+      window.location.reload();
+    } catch (err) {
+      console.error('Error executing button action:', err);
+      setError(err.message || 'Failed to execute button action');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [modelName, sessionId, database]);
+
+  /**
+   * 8.7 Handle Drag End
+   */
+  const handleDragEnd = useCallback(async (event) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) {
+      return;
+    }
+
+    const oldIndex = records.findIndex(r => r.id === active.id);
+    const newIndex = records.findIndex(r => r.id === over.id);
+
+    if (oldIndex === -1 || newIndex === -1) {
+      return;
+    }
+
+    // Optimistically update the local state
+    const newRecords = arrayMove(records, oldIndex, newIndex);
+    setRecords(newRecords);
+
+    // If the model has a sequence field, update it on the server
+    try {
+      // Check if the model has a sequence field
+      if (fields.sequence) {
+        // Update sequence values for affected records
+        const updates = [];
+        newRecords.forEach((record, index) => {
+          const newSequence = offset + index + 1;
+          if (record.sequence !== newSequence) {
+            updates.push([record.id, { sequence: newSequence }]);
+          }
+        });
+
+        // Batch update all affected records
+        for (const [recordId, values] of updates) {
+          await rpc.write(modelName, [recordId], values, sessionId, database);
+        }
+      }
+    } catch (err) {
+      console.error('Error updating record order:', err);
+      setError(err.message || 'Failed to update record order');
+      // Revert on error
+      window.location.reload();
+    }
+  }, [records, fields, offset, modelName, sessionId, database]);
+
+  /**
    * Initialize table
    */
   const table = useReactTable({
@@ -731,6 +911,17 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
             >
               <FaFileExport className="me-1" /> Export
             </Button>
+            {/* 8.7 Drag Mode Toggle */}
+            {fields.sequence && (
+              <Button
+                variant={isDragEnabled ? 'primary' : 'outline-secondary'}
+                onClick={() => setIsDragEnabled(!isDragEnabled)}
+                title="Toggle drag and drop reordering"
+              >
+                <FaGripVertical className="me-1" />
+                {isDragEnabled ? 'Drag Mode ON' : 'Drag Mode'}
+              </Button>
+            )}
             {/* 8.3 Column Visibility Toggle */}
             <DropdownButton
               as={ButtonGroup}
@@ -789,19 +980,30 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
 
       {/* Table */}
       <div className="flex-grow-1 overflow-auto">
-        <Table hover size="sm" className="mb-0">
-          <thead className="sticky-top bg-light">
-            {table.getHeaderGroups().map((headerGroup) => (
-              <tr key={headerGroup.id}>
-                {/* Checkbox column header */}
-                <th style={{ width: '40px' }}>
-                  <Form.Check
-                    type="checkbox"
-                    checked={selectedRows.size === records.length && records.length > 0}
-                    onChange={handleSelectAll}
-                    title="Select all"
-                  />
-                </th>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <Table hover size="sm" className="mb-0">
+            <thead className="sticky-top bg-light">
+              {table.getHeaderGroups().map((headerGroup) => (
+                <tr key={headerGroup.id}>
+                  {/* 8.7 Drag handle column header */}
+                  {isDragEnabled && (
+                    <th style={{ width: '40px' }}>
+                      <FaGripVertical style={{ color: '#ccc' }} />
+                    </th>
+                  )}
+                  {/* Checkbox column header */}
+                  <th style={{ width: '40px' }}>
+                    <Form.Check
+                      type="checkbox"
+                      checked={selectedRows.size === records.length && records.length > 0}
+                      onChange={handleSelectAll}
+                      title="Select all"
+                    />
+                  </th>
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
@@ -841,62 +1043,73 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
             ))}
           </thead>
           <tbody>
-            {table.getRowModel().rows.map((row) => (
-              <tr
-                key={row.id}
-                className={selectedRows.has(row.original.id) ? 'table-active' : ''}
-                onContextMenu={(e) => handleContextMenu(e, row.original)}
-              >
-                {/* Checkbox column */}
-                <td onClick={(e) => e.stopPropagation()}>
-                  <Form.Check
-                    type="checkbox"
-                    checked={selectedRows.has(row.original.id)}
-                    onChange={() => handleSelectRow(row.original.id)}
+            <SortableContext
+              items={records.map(r => r.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              {table.getRowModel().rows.map((row) => (
+                <SortableRow
+                  key={row.id}
+                  row={row.original}
+                  isDragEnabled={isDragEnabled}
+                >
+                  {/* Checkbox column */}
+                  <td
                     onClick={(e) => e.stopPropagation()}
-                  />
-                </td>
-                {/* Data columns */}
-                {row.getVisibleCells().map((cell) => {
-                  const isEditing =
-                    editingCell &&
-                    editingCell.rowId === row.original.id &&
-                    editingCell.columnId === cell.column.id;
+                    className={selectedRows.has(row.original.id) ? 'table-active' : ''}
+                  >
+                    <Form.Check
+                      type="checkbox"
+                      checked={selectedRows.has(row.original.id)}
+                      onChange={() => handleSelectRow(row.original.id)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </td>
+                  {/* Data columns */}
+                  {row.getVisibleCells().map((cell) => {
+                    const isEditing =
+                      editingCell &&
+                      editingCell.rowId === row.original.id &&
+                      editingCell.columnId === cell.column.id;
 
-                  return (
-                    <td
-                      key={cell.id}
-                      onClick={() => !isEditing && handleRowClick(row.original)}
-                      onDoubleClick={() => handleCellDoubleClick(row.original, cell.column)}
-                      style={{ cursor: isEditing ? 'text' : 'pointer' }}
-                    >
-                      {/* 8.6 Inline Cell Editing */}
-                      {isEditing ? (
-                        <Form.Control
-                          size="sm"
-                          type="text"
-                          value={editingCell.value}
-                          onChange={handleCellEditChange}
-                          onBlur={handleCellEditSave}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleCellEditSave();
-                            if (e.key === 'Escape') handleCellEditCancel();
-                          }}
-                          autoFocus
-                        />
-                      ) : (
-                        flexRender(cell.column.columnDef.cell, cell.getContext())
-                      )}
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
+                    return (
+                      <td
+                        key={cell.id}
+                        onClick={() => !isEditing && handleRowClick(row.original)}
+                        onDoubleClick={() => handleCellDoubleClick(row.original, cell.column)}
+                        onContextMenu={(e) => handleContextMenu(e, row.original)}
+                        style={{ cursor: isEditing ? 'text' : 'pointer' }}
+                        className={selectedRows.has(row.original.id) ? 'table-active' : ''}
+                      >
+                        {/* 8.6 Inline Cell Editing */}
+                        {isEditing ? (
+                          <Form.Control
+                            size="sm"
+                            type="text"
+                            value={editingCell.value}
+                            onChange={handleCellEditChange}
+                            onBlur={handleCellEditSave}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleCellEditSave();
+                              if (e.key === 'Escape') handleCellEditCancel();
+                            }}
+                            autoFocus
+                          />
+                        ) : (
+                          flexRender(cell.column.columnDef.cell, cell.getContext())
+                        )}
+                      </td>
+                    );
+                  })}
+                </SortableRow>
+              ))}
+            </SortableContext>
           </tbody>
           {/* 8.4 Aggregation Footer */}
           {Object.keys(aggregations).length > 0 && (
             <tfoot className="bg-light">
               <tr>
+                {isDragEnabled && <th></th>}
                 <th></th>
                 {table.getHeaderGroups()[0].headers.map((header) => {
                   const agg = aggregations[header.id];
@@ -915,6 +1128,7 @@ function ListView({ modelName, viewId = null, domain = [], limit = 80, onRecordC
             </tfoot>
           )}
         </Table>
+        </DndContext>
 
         {records.length === 0 && (
           <div className="text-center p-5 text-muted">
