@@ -2,12 +2,15 @@ import { useState, useEffect, useCallback } from 'react';
 import { Container, Spinner, Alert } from 'react-bootstrap';
 import TrytonViewRenderer from '../tryton/renderer/TrytonViewRenderer';
 import FormToolbar from './FormToolbar';
+import AttachmentWindow from '../windows/AttachmentWindow';
+import NoteWindow from '../windows/NoteWindow';
 import { parseAndNormalizeView } from '../tryton/parsers/xml';
 import rpc from '../api/rpc';
 import useSessionStore from '../store/session';
 import useTabsStore from '../store/tabs';
 import { createButtonHandler } from '../tryton/actions/buttonHandler';
 import { useFormValidation } from '../hooks/useFormValidation';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 
 /**
  * FormView Component
@@ -26,6 +29,11 @@ function FormView({ modelName, recordId, viewId = null, listContext = null }) {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState(null);
   const [isDirty, setIsDirty] = useState(false);
+  const [showAttachments, setShowAttachments] = useState(false);
+  const [attachmentCount, setAttachmentCount] = useState(0);
+  const [showNotes, setShowNotes] = useState(false);
+  const [noteCount, setNoteCount] = useState(0);
+  const [unreadNoteCount, setUnreadNoteCount] = useState(0);
 
   // Initialize form validation
   const {
@@ -454,6 +462,130 @@ function FormView({ modelName, recordId, viewId = null, listContext = null }) {
   }, [listContext, modelName, activeTabId, updateTab]);
 
   /**
+   * Load attachment count for current record
+   */
+  const loadAttachmentCount = useCallback(async () => {
+    if (!modelName || !recordId || !sessionId || !database) {
+      setAttachmentCount(0);
+      return;
+    }
+
+    try {
+      const resource = `${modelName},${recordId}`;
+      const attachmentIds = await rpc.search(
+        'ir.attachment',
+        [['resource', '=', resource]],
+        0,
+        null,
+        null,
+        sessionId,
+        database
+      );
+      setAttachmentCount(attachmentIds ? attachmentIds.length : 0);
+    } catch (err) {
+      console.error('Error loading attachment count:', err);
+      setAttachmentCount(0);
+    }
+  }, [modelName, recordId, sessionId, database]);
+
+  /**
+   * Load attachment count when record changes
+   */
+  useEffect(() => {
+    if (recordId) {
+      loadAttachmentCount();
+    }
+  }, [recordId, loadAttachmentCount]);
+
+  /**
+   * Load note count and unread count for current record
+   */
+  const loadNoteCount = useCallback(async () => {
+    if (!modelName || !recordId || !sessionId || !database) {
+      setNoteCount(0);
+      setUnreadNoteCount(0);
+      return;
+    }
+
+    try {
+      const resource = `${modelName},${recordId}`;
+      const noteIds = await rpc.search(
+        'ir.note',
+        [['resource', '=', resource]],
+        0,
+        null,
+        null,
+        sessionId,
+        database
+      );
+
+      if (noteIds && noteIds.length > 0) {
+        setNoteCount(noteIds.length);
+
+        // Count unread notes
+        const unreadIds = await rpc.search(
+          'ir.note',
+          [['resource', '=', resource], ['unread', '=', true]],
+          0,
+          null,
+          null,
+          sessionId,
+          database
+        );
+        setUnreadNoteCount(unreadIds ? unreadIds.length : 0);
+      } else {
+        setNoteCount(0);
+        setUnreadNoteCount(0);
+      }
+    } catch (err) {
+      console.error('Error loading note count:', err);
+      setNoteCount(0);
+      setUnreadNoteCount(0);
+    }
+  }, [modelName, recordId, sessionId, database]);
+
+  /**
+   * Load note count when record changes
+   */
+  useEffect(() => {
+    if (recordId) {
+      loadNoteCount();
+    }
+  }, [recordId, loadNoteCount]);
+
+  /**
+   * Handle attachment button click
+   */
+  const handleAttachment = useCallback(() => {
+    setShowAttachments(true);
+  }, []);
+
+  /**
+   * Handle attachment window close
+   */
+  const handleAttachmentClose = useCallback(() => {
+    setShowAttachments(false);
+    // Reload count after closing in case attachments were added/deleted
+    loadAttachmentCount();
+  }, [loadAttachmentCount]);
+
+  /**
+   * Handle note button click
+   */
+  const handleNote = useCallback(() => {
+    setShowNotes(true);
+  }, []);
+
+  /**
+   * Handle note window close
+   */
+  const handleNoteClose = useCallback(() => {
+    setShowNotes(false);
+    // Reload count after closing in case notes were added/deleted
+    loadNoteCount();
+  }, [loadNoteCount]);
+
+  /**
    * Handle button clicks
    */
   const handleButtonClick = useCallback(async (buttonName) => {
@@ -487,6 +619,64 @@ function FormView({ modelName, recordId, viewId = null, listContext = null }) {
       setError(err.message || 'Button action failed');
     }
   }, [modelName, recordId, sessionId, database]);
+
+  // Register keyboard shortcuts for form actions
+  useKeyboardShortcuts({
+    'Ctrl+S': () => {
+      if (!isSaving && !hasErrors && isDirty) {
+        handleSave();
+      }
+    },
+    'Ctrl+N': () => {
+      if (!isSaving) {
+        handleNew();
+      }
+    },
+    'Ctrl+D': () => {
+      if (!isSaving && recordId) {
+        handleDelete();
+      }
+    },
+    'Ctrl+Shift+D': () => {
+      if (!isSaving && recordId) {
+        handleDuplicate();
+      }
+    },
+    'Ctrl+R': () => {
+      if (!isSaving) {
+        handleReload();
+      }
+    },
+    'Ctrl+L': () => {
+      if (!isSaving) {
+        handleSwitchView();
+      }
+    },
+    'Ctrl+ArrowUp': () => {
+      if (!isSaving && listContext) {
+        handlePrevious();
+      }
+    },
+    'Ctrl+ArrowDown': () => {
+      if (!isSaving && listContext) {
+        handleNext();
+      }
+    },
+  }, [
+    isDirty,
+    isSaving,
+    hasErrors,
+    recordId,
+    listContext,
+    handleSave,
+    handleNew,
+    handleDelete,
+    handleDuplicate,
+    handleReload,
+    handleSwitchView,
+    handlePrevious,
+    handleNext,
+  ]);
 
   // Loading state
   if (isLoading) {
@@ -530,6 +720,11 @@ function FormView({ modelName, recordId, viewId = null, listContext = null }) {
         onSwitchView={handleSwitchView}
         onPrevious={listContext ? handlePrevious : null}
         onNext={listContext ? handleNext : null}
+        onAttachment={handleAttachment}
+        attachmentCount={attachmentCount}
+        onNote={handleNote}
+        noteCount={noteCount}
+        unreadNoteCount={unreadNoteCount}
         isDirty={isDirty}
         isSaving={isSaving || isValidating}
         hasErrors={hasErrors}
@@ -559,6 +754,24 @@ function FormView({ modelName, recordId, viewId = null, listContext = null }) {
           getFieldValidationProps={getFieldValidationProps}
         />
       </Container>
+
+      {/* Attachment Window */}
+      <AttachmentWindow
+        show={showAttachments}
+        onHide={handleAttachmentClose}
+        modelName={modelName}
+        recordId={recordId}
+        recordName={recordData.rec_name || recordData.name || `#${recordId}`}
+      />
+
+      {/* Note Window */}
+      <NoteWindow
+        show={showNotes}
+        onHide={handleNoteClose}
+        modelName={modelName}
+        recordId={recordId}
+        recordName={recordData.rec_name || recordData.name || `#${recordId}`}
+      />
     </div>
   );
 }

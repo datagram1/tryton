@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Navbar, Container, Dropdown, Spinner, Alert } from 'react-bootstrap';
-import { FiMenu, FiUser, FiLogOut } from 'react-icons/fi';
+import { FiMenu, FiUser, FiLogOut, FiSettings } from 'react-icons/fi';
 import Sidebar from './Sidebar';
 import TabManager from './TabManager';
+import WizardWindow from '../windows/WizardWindow';
+import PreferencesWindow from '../windows/PreferencesWindow';
 import useSessionStore from '../store/session';
 import useMenuStore from '../store/menu';
 import useTabsStore from '../store/tabs';
+import usePreferencesStore from '../store/preferences';
 import { executeAction } from '../tryton/actions/actionExecutor';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 
 /**
  * MainLayout Component
@@ -14,9 +18,13 @@ import { executeAction } from '../tryton/actions/actionExecutor';
  */
 function MainLayout() {
   const [sidebarVisible, setSidebarVisible] = useState(true);
+  const [wizardConfig, setWizardConfig] = useState(null);
+  const [showWizard, setShowWizard] = useState(false);
+  const [showPreferences, setShowPreferences] = useState(false);
   const { username, logout, sessionId, database } = useSessionStore();
   const { menuTree, isLoading, loadMenu, error } = useMenuStore();
-  const { openTab } = useTabsStore();
+  const { openTab, closeTab, tabs, activeTabId, setActiveTab } = useTabsStore();
+  const { loadPreferences, theme } = usePreferencesStore();
 
   // Load menu on mount
   useEffect(() => {
@@ -24,6 +32,20 @@ function MainLayout() {
       loadMenu(sessionId, database);
     }
   }, [sessionId, database, loadMenu, menuTree.length]);
+
+  // Load user preferences on mount
+  useEffect(() => {
+    if (sessionId && database) {
+      loadPreferences(sessionId, database);
+    }
+  }, [sessionId, database, loadPreferences]);
+
+  // Apply theme on mount and when it changes
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.body.setAttribute('data-bs-theme', theme);
+    }
+  }, [theme]);
 
   const handleMenuClick = async (menuItem) => {
     // When a menu item is clicked, execute the action and open appropriate view
@@ -41,9 +63,22 @@ function MainLayout() {
         const config = result.config;
         console.log('[MainLayout] Act window config:', config);
 
-        // Determine which view to open (tree or form)
+        // Determine which view to open (tree, form, calendar, graph, board, list-form, gantt)
         const viewType = config.initialViewType;
-        const tabType = viewType === 'form' ? 'form' : 'list';
+        let tabType = 'list'; // default
+
+        // Map view types to tab types
+        const viewTypeMap = {
+          'form': 'form',
+          'tree': 'list',
+          'calendar': 'calendar',
+          'graph': 'graph',
+          'board': 'board',
+          'list-form': 'list-form',
+          'gantt': 'gantt',
+        };
+
+        tabType = viewTypeMap[viewType] || 'list';
 
         const tabProps = {
           modelName: config.resModel,
@@ -64,6 +99,24 @@ function MainLayout() {
       } else if (result.type === 'url') {
         // Open URL in new window
         window.open(result.url, '_blank');
+      } else if (result.type === 'wizard') {
+        // Open wizard modal
+        console.log('[MainLayout] Opening wizard:', result.config);
+        setWizardConfig({
+          action: result.config.wizardAction,
+          name: result.config.name,
+          data: {
+            action_id: menuItem.actionId,
+            id: null,
+            ids: [],
+            model: null
+          },
+          context: {}
+        });
+        setShowWizard(true);
+      } else if (result.type === 'report') {
+        // Show message for report actions
+        alert('Report generation not yet implemented');
       } else {
         // Show message for unsupported action types
         alert(result.message || `Action type '${result.type}' not yet supported`);
@@ -76,6 +129,25 @@ function MainLayout() {
 
   const handleLogout = async () => {
     await logout();
+  };
+
+  const handleWizardClose = () => {
+    setShowWizard(false);
+    setWizardConfig(null);
+  };
+
+  const handleWizardComplete = (serverAction) => {
+    console.log('[MainLayout] Wizard completed with action:', serverAction);
+    setShowWizard(false);
+    setWizardConfig(null);
+
+    // Handle server actions
+    if (serverAction === 'reload menu') {
+      loadMenu();
+    } else if (serverAction === 'reload context') {
+      // TODO: Reload session context
+      console.log('[MainLayout] TODO: Reload context');
+    }
   };
 
   return (
@@ -100,11 +172,34 @@ function MainLayout() {
               size="sm"
               className="d-flex align-items-center"
             >
-              <FiUser className="me-2" />
+              {/* Avatar with initials */}
+              <div
+                className="rounded-circle bg-light text-primary d-flex align-items-center justify-content-center me-2"
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                }}
+              >
+                {username
+                  ? username
+                      .split(/[\s._-]+/)
+                      .slice(0, 2)
+                      .map((part) => part[0])
+                      .join('')
+                      .toUpperCase()
+                  : 'U'}
+              </div>
               {username}
             </Dropdown.Toggle>
 
             <Dropdown.Menu>
+              <Dropdown.Item onClick={() => setShowPreferences(true)}>
+                <FiSettings className="me-2" />
+                Preferences
+              </Dropdown.Item>
+              <Dropdown.Divider />
               <Dropdown.Item onClick={handleLogout}>
                 <FiLogOut className="me-2" />
                 Logout
@@ -147,6 +242,24 @@ function MainLayout() {
           )}
         </div>
       </div>
+
+      {/* Wizard Modal */}
+      {wizardConfig && (
+        <WizardWindow
+          show={showWizard}
+          action={wizardConfig.action}
+          data={wizardConfig.data}
+          context={wizardConfig.context}
+          onClose={handleWizardClose}
+          onComplete={handleWizardComplete}
+        />
+      )}
+
+      {/* Preferences Window */}
+      <PreferencesWindow
+        show={showPreferences}
+        onHide={() => setShowPreferences(false)}
+      />
     </div>
   );
 }

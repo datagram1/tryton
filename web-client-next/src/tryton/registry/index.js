@@ -15,6 +15,7 @@ import DateTimeWidget from './widgets/DateTimeWidget';
 import SelectionWidget from './widgets/SelectionWidget';
 import LabelWidget from './widgets/LabelWidget';
 import Many2OneWidget from './widgets/Many2OneWidget';
+import One2OneWidget from './widgets/One2OneWidget';
 import One2ManyWidget from './widgets/One2ManyWidget';
 import Many2ManyWidget from './widgets/Many2ManyWidget';
 import PasswordWidget from './widgets/PasswordWidget';
@@ -31,6 +32,7 @@ import HTMLWidget from './widgets/HTMLWidget';
 import ProgressBarWidget from './widgets/ProgressBarWidget';
 import TimeDeltaWidget from './widgets/TimeDeltaWidget';
 import ReferenceWidget from './widgets/ReferenceWidget';
+import DocumentWidget from './widgets/DocumentWidget';
 
 // Widget registry mapping Tryton types to React components
 const widgetRegistry = {
@@ -59,6 +61,7 @@ const widgetRegistry = {
 
   // Relational fields
   many2one: Many2OneWidget,
+  one2one: One2OneWidget, // One-to-one relationship
   one2many: One2ManyWidget,
   many2many: Many2ManyWidget,
   reference: ReferenceWidget, // Dynamic model reference
@@ -74,6 +77,7 @@ const widgetRegistry = {
   // Binary/Media widgets
   binary: BinaryWidget, // File upload/download
   image: ImageWidget, // Image upload with preview
+  document: DocumentWidget, // Document upload with PDF preview
 
   // Special/Display widgets
   html: HTMLWidget, // HTML content display (read-only)

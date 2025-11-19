@@ -1,4 +1,4 @@
-import { Navbar, Container, Button, ButtonGroup } from 'react-bootstrap';
+import { Navbar, Container, Button, ButtonGroup, Badge } from 'react-bootstrap';
 import {
   FaSave,
   FaTimes,
@@ -8,7 +8,9 @@ import {
   FaCopy,
   FaList,
   FaChevronUp,
-  FaChevronDown
+  FaChevronDown,
+  FaPaperclip,
+  FaStickyNote
 } from 'react-icons/fa';
 
 /**
@@ -28,6 +30,11 @@ function FormToolbar({
   onSwitchView,
   onPrevious,
   onNext,
+  onAttachment,
+  attachmentCount = 0,
+  onNote,
+  noteCount = 0,
+  unreadNoteCount = 0,
   hasRecord = false
 }) {
   return (
@@ -140,6 +147,47 @@ function FormToolbar({
             </Button>
           )}
         </ButtonGroup>
+
+        {/* Attachment Button */}
+        {onAttachment && hasRecord && (
+          <ButtonGroup size="sm" className="ms-2">
+            <Button
+              variant="outline-secondary"
+              onClick={onAttachment}
+              disabled={isSaving}
+              title="Attachments (Ctrl+Shift+T)"
+            >
+              <FaPaperclip className="me-1" />
+              Attachments
+              {attachmentCount > 0 && (
+                <Badge bg="primary" className="ms-1">{attachmentCount}</Badge>
+              )}
+            </Button>
+          </ButtonGroup>
+        )}
+
+        {/* Note Button */}
+        {onNote && hasRecord && (
+          <ButtonGroup size="sm" className="ms-2">
+            <Button
+              variant="outline-secondary"
+              onClick={onNote}
+              disabled={isSaving}
+              title="Notes (Ctrl+Shift+N)"
+            >
+              <FaStickyNote className="me-1" />
+              Notes
+              {noteCount > 0 && (
+                <>
+                  <Badge bg="secondary" className="ms-1">{noteCount}</Badge>
+                  {unreadNoteCount > 0 && (
+                    <Badge bg="danger" className="ms-1">{unreadNoteCount}</Badge>
+                  )}
+                </>
+              )}
+            </Button>
+          </ButtonGroup>
+        )}
       </Container>
     </Navbar>
   );

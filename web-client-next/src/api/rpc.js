@@ -372,6 +372,47 @@ export const rpc = {
    */
   nameSearch: (modelName, searchText, domain = [], sessionId, database, context = {}) =>
     call(`model.${modelName}.name_search`, [searchText, domain, context], sessionId, database),
+
+  /**
+   * Wizard Methods
+   */
+
+  /**
+   * Create a wizard session
+   * @param {string} wizardAction - Wizard action name (e.g., 'party.party.replace')
+   * @param {Object} context - Context with active_id, active_ids, active_model
+   * @param {string} sessionId - Session ID
+   * @param {string} database - Database name
+   * @returns {Promise<Array>} - [session_id, start_state, end_state]
+   */
+  wizardCreate: (wizardAction, context, sessionId, database) =>
+    call(`wizard.${wizardAction}.create`, [context], sessionId, database),
+
+  /**
+   * Execute a wizard state
+   * @param {string} wizardAction - Wizard action name
+   * @param {number} wizardSessionId - Wizard session ID
+   * @param {Object} data - Current form data {state_name: values}
+   * @param {string} state - Current state name
+   * @param {Object} context - Context
+   * @param {string} sessionId - Session ID
+   * @param {string} database - Database name
+   * @returns {Promise<Object>} - {view?: {...}, actions?: [...]}
+   */
+  wizardExecute: (wizardAction, wizardSessionId, data, state, context, sessionId, database) =>
+    call(`wizard.${wizardAction}.execute`, [wizardSessionId, data, state, context], sessionId, database),
+
+  /**
+   * Delete/end a wizard session
+   * @param {string} wizardAction - Wizard action name
+   * @param {number} wizardSessionId - Wizard session ID
+   * @param {Object} context - Context
+   * @param {string} sessionId - Session ID
+   * @param {string} database - Database name
+   * @returns {Promise<string|null>} - Action to perform (e.g., 'reload menu', 'reload context')
+   */
+  wizardDelete: (wizardAction, wizardSessionId, context, sessionId, database) =>
+    call(`wizard.${wizardAction}.delete`, [wizardSessionId, context], sessionId, database),
 };
 
 export default rpc;
