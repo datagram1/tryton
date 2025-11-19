@@ -3,6 +3,11 @@ import { FiX } from 'react-icons/fi';
 import useTabsStore from '../store/tabs';
 import FormView from './FormView';
 import ListView from './ListView';
+import CalendarView from './CalendarView';
+import GraphView from './GraphView';
+import BoardView from './BoardView';
+import ListFormView from './ListFormView';
+import GanttView from './GanttView';
 
 /**
  * Render tab content based on type
@@ -26,6 +31,54 @@ function renderTabContent(tab) {
           viewId={tab.props?.viewId}
           domain={tab.props?.domain || []}
           limit={tab.props?.limit || 80}
+        />
+      );
+
+    case 'calendar':
+      return (
+        <CalendarView
+          modelName={tab.props?.modelName}
+          viewId={tab.props?.viewId}
+          domain={tab.props?.domain || []}
+          limit={tab.props?.limit || 1000}
+        />
+      );
+
+    case 'graph':
+      return (
+        <GraphView
+          modelName={tab.props?.modelName}
+          viewId={tab.props?.viewId}
+          domain={tab.props?.domain || []}
+          limit={tab.props?.limit || 1000}
+        />
+      );
+
+    case 'board':
+      return (
+        <BoardView
+          modelName={tab.props?.modelName}
+          viewId={tab.props?.viewId}
+        />
+      );
+
+    case 'list-form':
+      return (
+        <ListFormView
+          modelName={tab.props?.modelName}
+          viewId={tab.props?.viewId}
+          domain={tab.props?.domain || []}
+          limit={tab.props?.limit || 80}
+        />
+      );
+
+    case 'gantt':
+      return (
+        <GanttView
+          modelName={tab.props?.modelName}
+          viewId={tab.props?.viewId}
+          domain={tab.props?.domain || []}
+          limit={tab.props?.limit || 1000}
         />
       );
 
