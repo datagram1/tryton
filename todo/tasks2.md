@@ -281,22 +281,24 @@ Currently implemented: Save, Cancel, New (in FormView only)
 
 ### Missing Advanced Actions
 
-- [ ] **3.6 Attachment Manager**
+- [x] **3.6 Attachment Manager** ✅ COMPLETED
   - File: `src/windows/AttachmentWindow.jsx`
   - Button in toolbar (Ctrl+Shift+T)
   - List all attachments on record
   - Upload/download/delete attachments
   - Drag & drop file upload
-  - Preview panel
+  - Preview panel (file type icons)
   - Attachment count badge on button
   - Reference: `/home/user/tryton/sao/src/window.js` (Attachment class)
 
-- [ ] **3.7 Note System**
+- [x] **3.7 Note System** ✅ COMPLETED
   - File: `src/windows/NoteWindow.jsx`
-  - Button in toolbar (Ctrl+Shift+O)
+  - Button in toolbar (Ctrl+Shift+N)
   - Add/edit/delete notes on record
-  - Unread/total count badge
+  - Mark notes as read/unread
+  - Unread/total count badges (secondary + danger)
   - Note timestamp and user tracking
+  - Inline note editor with save/cancel
   - Reference: `/home/user/tryton/sao/src/window.js` (Note class)
 
 - [ ] **3.8 Chat/Comments**
