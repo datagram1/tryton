@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Container, Spinner, Alert } from 'react-bootstrap';
 import TrytonViewRenderer from '../tryton/renderer/TrytonViewRenderer';
 import FormToolbar from './FormToolbar';
+import AttachmentWindow from './AttachmentWindow';
 import { parseAndNormalizeView } from '../tryton/parsers/xml';
 import rpc from '../api/rpc';
 import useSessionStore from '../store/session';
@@ -26,6 +27,10 @@ function FormView({ modelName, recordId, viewId = null, listContext = null }) {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState(null);
   const [isDirty, setIsDirty] = useState(false);
+
+  // Attachment state
+  const [showAttachments, setShowAttachments] = useState(false);
+  const [attachmentCount, setAttachmentCount] = useState(0);
 
   // Initialize form validation
   const {
@@ -488,6 +493,36 @@ function FormView({ modelName, recordId, viewId = null, listContext = null }) {
     }
   }, [modelName, recordId, sessionId, database]);
 
+  /**
+   * Handle attachments button click
+   */
+  const handleAttachments = useCallback(() => {
+    setShowAttachments(true);
+  }, []);
+
+  /**
+   * Handle attachment count change
+   */
+  const handleAttachmentCountChange = useCallback((count) => {
+    setAttachmentCount(count);
+  }, []);
+
+  /**
+   * Handle keyboard shortcuts
+   */
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Ctrl+Shift+T - Attachments
+      if (e.ctrlKey && e.shiftKey && e.key === 'T' && recordId) {
+        e.preventDefault();
+        setShowAttachments(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [recordId]);
+
   // Loading state
   if (isLoading) {
     return (
@@ -530,6 +565,8 @@ function FormView({ modelName, recordId, viewId = null, listContext = null }) {
         onSwitchView={handleSwitchView}
         onPrevious={listContext ? handlePrevious : null}
         onNext={listContext ? handleNext : null}
+        onAttachments={handleAttachments}
+        attachmentCount={attachmentCount}
         isDirty={isDirty}
         isSaving={isSaving || isValidating}
         hasErrors={hasErrors}
@@ -559,6 +596,18 @@ function FormView({ modelName, recordId, viewId = null, listContext = null }) {
           getFieldValidationProps={getFieldValidationProps}
         />
       </Container>
+
+      {/* Attachment Window */}
+      {recordId && (
+        <AttachmentWindow
+          show={showAttachments}
+          onHide={() => setShowAttachments(false)}
+          modelName={modelName}
+          recordId={recordId}
+          recordName={recordData.rec_name || recordData.name || `#${recordId}`}
+          onAttachmentCountChange={handleAttachmentCountChange}
+        />
+      )}
     </div>
   );
 }

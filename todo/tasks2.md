@@ -281,13 +281,13 @@ Currently implemented: Save, Cancel, New (in FormView only)
 
 ### Missing Advanced Actions
 
-- [ ] **3.6 Attachment Manager**
-  - File: `src/windows/AttachmentWindow.jsx`
+- [x] **3.6 Attachment Manager** ✅ COMPLETED
+  - File: `src/components/AttachmentWindow.jsx`
   - Button in toolbar (Ctrl+Shift+T)
   - List all attachments on record
   - Upload/download/delete attachments
   - Drag & drop file upload
-  - Preview panel
+  - Preview panel (file icons by type)
   - Attachment count badge on button
   - Reference: `/home/user/tryton/sao/src/window.js` (Attachment class)
 

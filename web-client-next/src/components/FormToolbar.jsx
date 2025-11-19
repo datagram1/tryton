@@ -1,4 +1,4 @@
-import { Navbar, Container, Button, ButtonGroup } from 'react-bootstrap';
+import { Navbar, Container, Button, ButtonGroup, Badge } from 'react-bootstrap';
 import {
   FaSave,
   FaTimes,
@@ -8,7 +8,8 @@ import {
   FaCopy,
   FaList,
   FaChevronUp,
-  FaChevronDown
+  FaChevronDown,
+  FaPaperclip
 } from 'react-icons/fa';
 
 /**
@@ -28,6 +29,8 @@ function FormToolbar({
   onSwitchView,
   onPrevious,
   onNext,
+  onAttachments,
+  attachmentCount = 0,
   hasRecord = false
 }) {
   return (
@@ -140,6 +143,23 @@ function FormToolbar({
             </Button>
           )}
         </ButtonGroup>
+
+        {onAttachments && hasRecord && (
+          <ButtonGroup size="sm" className="ms-2">
+            <Button
+              variant="outline-info"
+              onClick={onAttachments}
+              disabled={isSaving}
+              title="Manage attachments (Ctrl+Shift+T)"
+            >
+              <FaPaperclip className="me-1" />
+              Attachments
+              {attachmentCount > 0 && (
+                <Badge bg="danger" className="ms-2">{attachmentCount}</Badge>
+              )}
+            </Button>
+          </ButtonGroup>
+        )}
       </Container>
     </Navbar>
   );
