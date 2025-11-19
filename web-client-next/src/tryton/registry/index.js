@@ -23,6 +23,12 @@ import URLWidget from './widgets/URLWidget';
 import EmailWidget from './widgets/EmailWidget';
 import ColorWidget from './widgets/ColorWidget';
 import CallToWidget from './widgets/CallToWidget';
+import NumericWidget from './widgets/NumericWidget';
+import MultiSelectionWidget from './widgets/MultiSelectionWidget';
+import BinaryWidget from './widgets/BinaryWidget';
+import ImageWidget from './widgets/ImageWidget';
+import HTMLWidget from './widgets/HTMLWidget';
+import ProgressBarWidget from './widgets/ProgressBarWidget';
 
 // Widget registry mapping Tryton types to React components
 const widgetRegistry = {
@@ -34,7 +40,7 @@ const widgetRegistry = {
   // Numeric types
   integer: IntegerWidget,
   float: FloatWidget,
-  numeric: FloatWidget,
+  numeric: NumericWidget, // Arbitrary precision decimals
 
   // Boolean
   boolean: BooleanWidget,
@@ -46,6 +52,7 @@ const widgetRegistry = {
 
   // Selection (dropdown)
   selection: SelectionWidget,
+  multiselection: MultiSelectionWidget, // Multiple selection with tags
 
   // Relational fields
   many2one: Many2OneWidget,
@@ -59,6 +66,14 @@ const widgetRegistry = {
 
   // Visual widgets
   color: ColorWidget,
+
+  // Binary/Media widgets
+  binary: BinaryWidget, // File upload/download
+  image: ImageWidget, // Image upload with preview
+
+  // Special/Display widgets
+  html: HTMLWidget, // HTML content display (read-only)
+  progressbar: ProgressBarWidget, // Progress bar display (read-only)
 
   // Layout widgets
   label: LabelWidget,
