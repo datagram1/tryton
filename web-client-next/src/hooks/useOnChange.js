@@ -38,10 +38,10 @@ function useOnChange(modelName, fields, onUpdate, sessionId, database, debounceM
     try {
       // The on_change method is called with the current record values
       // and returns a dictionary of field updates
-      const result = await rpc.model(
+      const result = await rpc.onChange(
         modelName,
-        'on_change',
-        [currentRecord, [fieldName]],
+        currentRecord,
+        [fieldName],
         sessionId,
         database
       );

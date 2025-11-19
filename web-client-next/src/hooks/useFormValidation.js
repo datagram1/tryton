@@ -169,10 +169,9 @@ export function useFormValidation(modelName, fields, record, sessionId, database
 
     try {
       // Call the server's pre_validate method
-      await rpc.model(
+      await rpc.preValidate(
         modelName,
-        'pre_validate',
-        [[record]],
+        [record],
         sessionId,
         database
       );
