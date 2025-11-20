@@ -10,3 +10,6 @@ requirements.txt
 requirements-dev.txt
 .hgignore-modules
 include:.hgignore-modules
+web-client-next/node_modules/
+web-client-next/dist/
+web-client-next/.env.local

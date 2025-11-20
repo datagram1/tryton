@@ -1,0 +1,32 @@
+# Tryton Backend Server Requirements
+# Install with: pip install -r backend-requirements.txt
+
+# Core Tryton server
+trytond>=7.0
+
+# Database adapter
+psycopg2-binary>=2.9
+
+# Essential Tryton modules
+trytond-party>=7.0
+trytond-company>=7.0
+trytond-currency>=7.0
+trytond-product>=7.0
+trytond-country>=7.0
+
+# Optional but commonly used modules
+trytond-account>=7.0
+trytond-account-invoice>=7.0
+trytond-purchase>=7.0
+trytond-sale>=7.0
+trytond-stock>=7.0
+
+# Password hashing (Argon2)
+passlib>=1.7
+argon2-cffi>=23.1
+
+# WSGI server for production
+gunicorn>=21.2
+
+# Additional utilities
+python-sql>=1.4
